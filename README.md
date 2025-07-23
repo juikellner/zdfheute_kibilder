@@ -5,6 +5,5 @@ Diese Streamlit-App analysiert die drei Top-News der zdfheute.de-Website, erstel
 ## 🔧 Lokale Ausführung
 
 ```bash
-git clone https://github.com/DEINUSERNAME/ZDFHEUTE_BILDSCRAPER.git
-cd ZDFHEUTE_BILDSCRAPER
 pip install -r requirements.txt
+streamlit run zdf_scraper.py
