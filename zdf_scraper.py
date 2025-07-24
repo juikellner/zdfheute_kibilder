@@ -93,8 +93,9 @@ def generate_image(prompt):
         )
         st.write("Replicate-Ausgabe:", output)  # Debug-Ausgabe anzeigen
 
-        if isinstance(output, str) and output.startswith("http"):
-            img_response = requests.get(output, timeout=20)
+        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
+            img_url = output[0]
+            img_response = requests.get(img_url, timeout=20)
             if img_response.status_code == 200:
                 return BytesIO(img_response.content)
             else:
