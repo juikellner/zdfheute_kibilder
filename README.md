@@ -1,6 +1,6 @@
 # 📰 ZDF Bilder-Scraper mit GPT-4 & Replicate
 
-Diese Streamlit-App analysiert die drei Top-News der zdfheute.de-Website, erstellt zu Dach- und Schlagzeile hochwertige, cineastische Bildprompts mit GPT-4 und generiert Bilder mit dem `google/imagen-4`-Modell von replicate.com.
+Diese Streamlit-App scrapt die drei Top-Teaser-Bilder der zdfheute.de-Website, erstellt zu Dach- und Schlagzeile hochwertige, cineastische Bildprompts mit GPT-4 und generiert Bilder mit dem `google/imagen-4`-Modell von replicate.com.
 
 ## 🔧 Lokale Ausführung
 
