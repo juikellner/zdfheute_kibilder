@@ -64,6 +64,7 @@ def scrape_top_articles():
         return []
 
 # Generate image prompt using OpenAI
+
 def generate_prompt(headline, dachzeile, image_url):
     try:
         vision_response = openai.chat.completions.create(
@@ -135,7 +136,7 @@ data = scrape_top_articles()
 
 if data:
     for idx, item in enumerate(data):
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([1, 2])
         with col1:
             st.image(item["image_url"], caption="Originalbild", use_container_width=True)
         with col2:
@@ -148,10 +149,10 @@ if data:
                     prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                     if prompt:
                         st.markdown("**📝 Generierter Prompt:**")
-                        st.code(prompt)
+                        st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{prompt}</div>", unsafe_allow_html=True)
                         image = generate_image(prompt)
                         if image:
-                            st.image(image, caption="KI-generiertes Bild", use_container_width=True)
+                            st.image(image, caption="KI-generiertes Bild", width=400)
                         else:
                             st.error("❌ Bild konnte nicht generiert werden.")
                     else:
