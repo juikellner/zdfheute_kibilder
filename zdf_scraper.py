@@ -95,18 +95,14 @@ def generate_image(prompt):
 
         if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
             img_url = output[0]
-            img_response = requests.get(img_url, timeout=20)
-            if img_response.status_code == 200:
-                return BytesIO(img_response.content)
-            else:
-                st.warning("Bild konnte nicht geladen werden.")
-                return None
+            st.image(img_url, caption="KI-generiertes Bild", use_container_width=True)
+            return True
         else:
             st.warning("Ausgabe von Replicate ist leer oder ungültig.")
-            return None
+            return False
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
-        return None
+        return False
 
 # MAIN APP FLOW
 data = scrape_top_articles()
@@ -127,10 +123,8 @@ if data:
                     if prompt:
                         st.markdown("**📝 Generierter Prompt:**")
                         st.code(prompt)
-                        image_data = generate_image(prompt)
-                        if image_data:
-                            st.image(image_data, caption="KI-generiertes Bild", use_container_width=True)
-                        else:
+                        success = generate_image(prompt)
+                        if not success:
                             st.error("❌ Bild konnte nicht generiert werden.")
                     else:
                         st.error("❌ Prompt konnte nicht erzeugt werden.")
