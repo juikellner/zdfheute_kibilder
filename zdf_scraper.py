@@ -75,7 +75,7 @@ def generate_prompt(headline, dachzeile):
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI."},
-                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nDer Prompt soll für ein fotorealistisches Text-zu-Bild-Modell wie 'google/imagen-4-fast' geeignet sein. Schreibe den Prompt auf Englisch."}
+                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nDer Prompt soll für ein fotorealistisches Text-zu-Bild-Modell wie 'bytedance/seedream-3' geeignet sein. Schreibe den Prompt auf Englisch."}
             ]
         )
         return response.choices[0].message.content.strip()
@@ -83,17 +83,14 @@ def generate_prompt(headline, dachzeile):
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
         return None
 
-# Generate image with Replicate (imagen-4-fast)
+# Generate image with Replicate (seedream-3)
 def generate_image(prompt):
     try:
         os.environ["REPLICATE_API_TOKEN"] = replicate_token
         output = replicate.run(
-            "google/imagen-4-fast",
+            "bytedance/seedream-3",
             input={
-                "prompt": prompt,
-                "aspect_ratio": "4:3",
-                "output_format": "jpg",
-                "safety_filter_level": "block_only_high"
+                "prompt": prompt
             }
         )
         if isinstance(output, list) and output:
