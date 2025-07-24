@@ -95,7 +95,7 @@ def generate_image(prompt):
 
         if isinstance(output, str) and output.startswith("http"):
             return output
-        elif isinstance(output, list) and output and isinstance(output[0], str):
+        elif isinstance(output, list) and output and isinstance(output[0], str) and output[0].startswith("http"):
             return output[0]
         else:
             st.warning("Ausgabe von Replicate ist leer oder ungültig.")
