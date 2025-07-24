@@ -103,6 +103,11 @@ def generate_image_url(prompt):
             input={"prompt": prompt, "aspect_ratio": "3:2"}
         )
 
+        # If output is a string, return it directly
+        if isinstance(output, str):
+            return output
+
+        # If output is a list, return first valid URL
         if isinstance(output, list) and len(output) > 0 and isinstance(output[0], str):
             return output[0]
 
