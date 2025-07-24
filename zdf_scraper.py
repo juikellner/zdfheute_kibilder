@@ -103,15 +103,8 @@ def generate_image_url(prompt):
             input={"prompt": prompt, "aspect_ratio": "3:2"}
         )
 
-        if hasattr(output, "url"):
-            return output.url()
-
-        if isinstance(output, list):
-            for item in output:
-                if isinstance(item, str) and item.startswith("http"):
-                    return item
-        elif isinstance(output, str) and output.startswith("http"):
-            return output
+        if isinstance(output, list) and len(output) > 0 and isinstance(output[0], str):
+            return output[0]
 
         return None
     except Exception as e:
@@ -134,12 +127,14 @@ if data:
         st.image(item["image_url"], caption="Originalbild", width=400)
 
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
-            with st.spinner("Erzeuge Prompt und Bild-Link..."):
+            with st.spinner("🔍 Erzeuge Prompt..."):
                 prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
-                image_url = None
-                if prompt:
+                st.session_state[f"generated_{idx}"]["prompt"] = prompt
+
+            if prompt:
+                with st.spinner("🎨 Erzeuge KI-Bild..."):
                     image_url = generate_image_url(prompt)
-                st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image_url": image_url}
+                    st.session_state[f"generated_{idx}"]["image_url"] = image_url
             st.rerun()
 
         generated = st.session_state.get(f"generated_{idx}", {})
