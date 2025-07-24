@@ -91,15 +91,24 @@ def generate_image(prompt):
             "bytedance/seedream-3",
             input={"prompt": prompt}
         )
-        st.write("Replicate-Ausgabe:", output)  # Debug-Ausgabe anzeigen
 
-        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
+        st.write("Replicate-Ausgabe:", output)
+
+        if isinstance(output, list) and len(output) > 0:
             img_url = output[0]
-            st.image(img_url, caption="KI-generiertes Bild", use_container_width=True)
-            return True
+            try:
+                response = requests.get(img_url, timeout=20)
+                if response.status_code == 200:
+                    image = Image.open(BytesIO(response.content))
+                    st.image(image, caption="KI-generiertes Bild", use_container_width=True)
+                    return True
+                else:
+                    st.warning(f"Bild konnte nicht geladen werden. Statuscode: {response.status_code}")
+            except Exception as e:
+                st.warning(f"Fehler beim Laden des Bildes: {e}")
         else:
             st.warning("Ausgabe von Replicate ist leer oder ungültig.")
-            return False
+        return False
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
         return False
