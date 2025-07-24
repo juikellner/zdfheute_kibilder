@@ -15,7 +15,7 @@ replicate_token = os.getenv("REPLICATE_API_TOKEN")
 
 # Streamlit app title
 st.set_page_config(layout="wide")
-st.title("📰 ZDFheute KI-Bilder Generator")
+st.title("📰 ZDFheute KI-Teaser")
 
 # Scrape top news articles from ZDFheute with best image resolution
 def scrape_top_articles():
@@ -132,7 +132,7 @@ if data:
 
             if prompt:
                 st.markdown("**📝 Generierter Prompt:**")
-                st.markdown(f"<code style='font-size: 0.7rem; word-break: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
+                st.markdown(f"<code style='font-size: 0.8rem; word-break: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
 
                 with st.spinner("🎨 Erzeuge KI-Bild..."):
                     image_url = generate_image_url(prompt)
@@ -145,7 +145,7 @@ if data:
 
         if prompt:
             st.markdown("**📝 Generierter Prompt:**")
-            st.markdown(f"<code style='font-size: 0.7rem; word-break: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
+            st.markdown(f"<code style='font-size: 0.8rem; word-break: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
 
         if image_url:
             col1, col2 = st.columns(2)
