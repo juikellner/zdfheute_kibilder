@@ -1,125 +1,116 @@
 #%%
-import os
-import requests
-import replicate
 import streamlit as st
+import requests
 from bs4 import BeautifulSoup
-from openai import OpenAI
+from PIL import Image
+from io import BytesIO
+import os
 from dotenv import load_dotenv
+from openai import OpenAI
+import replicate
 
-# Umgebungsvariablen laden (für lokalen Betrieb)
+# Umgebungsvariablen laden
 load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
+replicate_token = os.getenv("REPLICATE_API_TOKEN") or st.secrets.get("REPLICATE_API_TOKEN")
 
-# API-Keys laden (lokal oder über Streamlit Cloud Secrets)
-try:
-    openai_api_key = os.getenv("OPENAI_API_KEY") or st.secrets["OPENAI_API_KEY"]
-    replicate_token = os.getenv("REPLICATE_API_TOKEN") or st.secrets["REPLICATE_API_TOKEN"]
-except Exception as e:
-    st.error("❌ API-Schlüssel nicht gefunden. Bitte setze sie in deiner .env-Datei oder unter 'Secrets' in Streamlit Cloud.")
-    st.stop()
-
+# Clients initialisieren
 openai_client = OpenAI(api_key=openai_api_key)
 replicate_client = replicate.Client(api_token=replicate_token)
 
-st.set_page_config(page_title="ZDF KI-Bilder", layout="wide")
-st.title("📰 ZDF Bilder + KI-Visualisierungen")
+# ZDFheute-Startseite auslesen
+url = "https://www.zdf.de/nachrichten"
+headers = {"User-Agent": "Mozilla/5.0"}
+response = requests.get(url, headers=headers)
+soup = BeautifulSoup(response.content, "html.parser")
 
-# Session-State initialisieren
-if "entries" not in st.session_state:
-    st.session_state.entries = []
-if "prompts" not in st.session_state:
-    st.session_state.prompts = {}
-if "images" not in st.session_state:
-    st.session_state.images = {}
+# Container-Elemente finden
+articles = soup.find_all("article", class_="news-teaser-item")
+data = []
 
-def scrape_zdf():
-    url = "https://www.zdfheute.de/"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-    except Exception as e:
-        st.error(f"Fehler beim Laden der Webseite: {e}")
-        return
+for article in articles[:3]:  # Nur die ersten drei Einträge
+    img_tag = article.find("img")
+    headline_tag = article.find("span", class_="news-teaser-item__title")
+    dachzeile_tag = article.find("span", class_="news-teaser-item__eyecatcher")
 
-    soup = BeautifulSoup(response.content, "html.parser")
+    image_url = img_tag["src"] if img_tag and "src" in img_tag.attrs else None
+    headline = headline_tag.text.strip() if headline_tag else "[Keine Schlagzeile]"
+    dachzeile = dachzeile_tag.text.strip() if dachzeile_tag else "[Keine Dachzeile]"
 
-    articles = soup.find_all("article", class_="zdf-article-teaser")
-    results = []
+    if image_url:
+        data.append({
+            "image_url": image_url,
+            "headline": headline,
+            "dachzeile": dachzeile
+        })
 
-    for article in articles:
-        img_tag = article.find("img")
-        dachzeile_tag = article.find("span", class_="o1ximh7k")
-        headline_tag = article.find("a", class_="b7kurox")
+st.set_page_config(page_title="ZDFheute KI-Bilder", layout="wide")
+st.title("📰 ZDFheute KI-Bilder Generator")
 
-        if img_tag and dachzeile_tag and headline_tag:
-            img_url = img_tag.get("src")
-            dachzeile = dachzeile_tag.text.strip()
-            headline = headline_tag.text.strip()
+for idx, entry in enumerate(data):
+    st.divider()
+    cols = st.columns([1, 2])
 
-            results.append({
-                "img_url": img_url,
-                "dachzeile": dachzeile,
-                "headline": headline
-            })
+    with cols[0]:
+        try:
+            response = requests.get(entry["image_url"], headers=headers, timeout=10)
+            if response.status_code == 200:
+                image = Image.open(BytesIO(response.content))
+                st.image(image, caption="Originalbild", use_container_width=True)
+            else:
+                st.warning(f"Bild konnte nicht geladen werden (Statuscode: {response.status_code})")
+        except Exception as e:
+            st.error(f"Fehler beim Laden des Bildes: {e}")
 
-    st.session_state.entries = results
+    with cols[1]:
+        st.subheader(entry.get("headline", "[Keine Schlagzeile]"))
+        st.caption(entry.get("dachzeile", "[Keine Dachzeile]"))
 
-# Scrape Button anzeigen
-if st.button("🔄 ZDF-Daten laden"):
-    with st.spinner("ZDF-Bilder werden geladen..."):
-        scrape_zdf()
+        prompt_key = f"prompt_{idx}"
+        image_key = f"image_{idx}"
 
-if not st.session_state.entries:
-    st.info("⬆️ Klicke oben auf 'ZDF-Daten laden', um die Inhalte zu laden.")
-
-for idx, entry in enumerate(st.session_state.entries):
-    with st.container():
-        cols = st.columns([1, 2])
-        with cols[0]:
-            st.image(entry["img_url"], caption="Originalbild", use_container_width=True)
-        with cols[1]:
-            st.subheader(entry["headline"])
-            st.caption(entry.get("dachzeile", ""))
-
-            prompt_key = f"prompt_{idx}"
-            image_key = f"image_{idx}"
-
-            if st.button(f"🧠 Prompt generieren {idx+1}"):
-                with st.spinner("Generiere Bildbeschreibung mit OpenAI..."):
-                    prompt_text = f"Erstelle eine cinematische, fotorealistische Bildbeschreibung zur Schlagzeile '{entry['headline']}' und der Dachzeile '{entry['dachzeile']}'."                    
+        # Prompt-Formular
+        with st.form(key=f"form_prompt_{idx}"):
+            submitted_prompt = st.form_submit_button("🎨 Prompt generieren")
+            if submitted_prompt:
+                with st.spinner("Erstelle Prompt..."):
                     try:
-                        chat_response = openai_client.chat.completions.create(
+                        completion = openai_client.chat.completions.create(
                             model="gpt-4",
                             messages=[
-                                {"role": "system", "content": "Du erstellst detaillierte Bildbeschreibungen im Stil eines Kamera-Regieanweisungstextes für einen KI-Bildgenerator."},
-                                {"role": "user", "content": prompt_text}
+                                {"role": "system", "content": "Du bist ein Prompt-Experte für fotorealistische, kinoreife Bilder."},
+                                {"role": "user", "content": f"Erstelle einen hochwertigen Prompt im Stil von Replicate, basierend auf Dachzeile '{entry['dachzeile']}' und Schlagzeile '{entry['headline']}'."}
                             ]
                         )
-                        prompt = chat_response.choices[0].message.content.strip()
-                        st.session_state.prompts[prompt_key] = prompt
-                        st.success("Prompt erfolgreich generiert.")
+                        st.session_state[prompt_key] = completion.choices[0].message.content
                     except Exception as e:
-                        st.error(f"Fehler bei OpenAI: {e}")
+                        st.session_state[prompt_key] = f"Fehler bei Prompt-Erstellung: {e}"
 
-            if prompt_key in st.session_state.prompts:
-                st.text_area("Prompt:", st.session_state.prompts[prompt_key], height=150)
+        if prompt_key in st.session_state:
+            st.text_area("Prompt", st.session_state[prompt_key], height=200)
 
-                if st.button(f"🎨 Bild generieren {idx+1}"):
-                    with st.spinner("Bild wird mit replicate erstellt..."):
-                        try:
-                            output_url = replicate_client.run(
-                                "google/imagen-4",
-                                input={
-                                    "prompt": st.session_state.prompts[prompt_key],
-                                    "aspect_ratio": "16:9",
-                                    "safety_filter_level": "block_medium_and_above"
-                                }
-                            )
-                            st.session_state.images[image_key] = output_url
-                            st.success("Bild erfolgreich generiert.")
-                        except Exception as e:
-                            st.error(f"Fehler bei replicate: {e}")
+        # Bild-Formular
+        with st.form(key=f"form_image_{idx}"):
+            submitted_image = st.form_submit_button("🧠 Bild generieren")
+            if submitted_image and prompt_key in st.session_state:
+                with st.spinner("Generiere Bild über Replicate..."):
+                    try:
+                        output_url = replicate_client.run(
+                            "google/imagen-4",
+                            input={
+                                "prompt": st.session_state[prompt_key],
+                                "aspect_ratio": "16:9",
+                                "safety_filter_level": "block_medium_and_above"
+                            }
+                        )
+                        st.session_state[image_key] = output_url
+                    except Exception as e:
+                        st.session_state[image_key] = f"Fehler: {e}"
 
-            if image_key in st.session_state.images:
-                st.image(st.session_state.images[image_key], caption="KI-Bild", use_container_width=True)
+        if image_key in st.session_state:
+            if isinstance(st.session_state[image_key], str) and st.session_state[image_key].startswith("http"):
+                st.image(st.session_state[image_key], caption="KI-generiertes Bild", use_container_width=True)
+            else:
+                st.error(st.session_state[image_key])
+
 # %%
