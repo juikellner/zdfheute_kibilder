@@ -18,7 +18,7 @@ st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Teaser")
 
 # Hinweistext (klein und responsiv)
-st.markdown("<p style='font-size: 1.2rem; line-height: 1.0;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o zur Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile und der Dachzeile eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von replicate.com verwendet.</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 0.8rem; line-height: 1.4;'>🔍 Diese Anwendung nutzt GPT-4o zur Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile und der Dachzeile eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von Replicate verwendet. Das erzeugte Bild enthält keinen Text.</p>", unsafe_allow_html=True)
 
 # Scrape top news articles from ZDFheute with best image resolution
 def scrape_top_articles():
@@ -72,8 +72,7 @@ def generate_prompt(headline, dachzeile, image_url):
         vision_response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich."},
-                {"role": "user", "content": "Du. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
                 {
                     "role": "user",
                     "content": [
@@ -89,14 +88,14 @@ def generate_prompt(headline, dachzeile, image_url):
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich."},
-                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI."},
+                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
             ]
         )
-        return response.choices[0].message.content.strip().replace("\n", " ")
+        return response.choices[0].message.content.strip().replace("\n", " "), image_description
     except Exception as e:
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
-        return None
+        return None, None
 
 # Generate image with Replicate (google/imagen-4-fast)
 def generate_image_url(prompt):
@@ -130,14 +129,20 @@ if data:
         st.markdown(f"🔗 [Zum Artikel]({item['url']})")
 
         if f"generated_{idx}" not in st.session_state:
-            st.session_state[f"generated_{idx}"] = {"prompt": None, "image_url": None}
+            st.session_state[f"generated_{idx}"] = {"prompt": None, "image_url": None, "image_description": None}
 
         st.image(item["image_url"], caption="Originalbild", width=800)
 
+        # Bildbeschreibung anzeigen, falls vorhanden
+        if st.session_state[f"generated_{idx}"].get("image_description"):
+            st.markdown("**🖼️ Bildbeschreibung:**")
+            st.markdown(f"<code style='font-size: 0.9rem; word-break: break-word; white-space: pre-wrap;'>{st.session_state[f'generated_{idx}']['image_description']}</code>", unsafe_allow_html=True)
+
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
             with st.spinner("🔍 Erzeuge Prompt..."):
-                prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
+                prompt, image_description = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                 st.session_state[f"generated_{idx}"]["prompt"] = prompt
+                st.session_state[f"generated_{idx}"]["image_description"] = image_description
 
             if prompt:
                 st.markdown("**📝 Generierter Prompt:**")
