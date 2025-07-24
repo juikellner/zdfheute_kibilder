@@ -109,22 +109,13 @@ def generate_image(prompt):
             }
         )
 
-        st.markdown("**📤 Raw Replicate Output:**")
+        st.markdown("### 🧪 Raw Replicate Output:")
         st.write(output)
 
-        if isinstance(output, list) and len(output) > 0 and output[0] and output[0].startswith("http"):
-            img_url = output[0]
-            try:
-                response = requests.get(img_url, timeout=20)
-                response.raise_for_status()
-                if "image" in response.headers.get("Content-Type", ""):
-                    return Image.open(BytesIO(response.content))
-                else:
-                    st.warning(f"⚠️ Unerwarteter Content-Type: {response.headers.get('Content-Type')}")
-            except Exception as e:
-                st.warning(f"Fehler beim Bild-Download oder Anzeige: {e}")
-        else:
-            st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
+        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
+            return output[0]  # return the URL directly
+
+        st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
         return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
@@ -141,14 +132,14 @@ if data:
         st.markdown(f"🔗 [Zum Artikel]({item['url']})")
 
         if f"generated_{idx}" not in st.session_state:
-            st.session_state[f"generated_{idx}"] = {"prompt": None, "image": None}
+            st.session_state[f"generated_{idx}"] = {"prompt": None, "image_url": None}
 
-        if st.session_state[f"generated_{idx}"]["image"]:
+        if st.session_state[f"generated_{idx}"]["image_url"]:
             col1, col2 = st.columns(2)
             with col1:
                 st.image(item["image_url"], caption="Originalbild", width=400)
             with col2:
-                st.image(st.session_state[f"generated_{idx}"]["image"], caption="KI-generiertes Bild", width=400)
+                st.image(st.session_state[f"generated_{idx}"]["image_url"], caption="KI-generiertes Bild", width=400)
         else:
             st.image(item["image_url"], caption="Originalbild", width=400)
 
@@ -156,8 +147,8 @@ if data:
             with st.spinner("Erzeuge Prompt und Bild..."):
                 prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                 if prompt:
-                    image = generate_image(prompt)
-                    st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image": image}
+                    image_url = generate_image(prompt)
+                    st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image_url": image_url}
                 else:
                     st.error("❌ Prompt konnte nicht erzeugt werden.")
             st.rerun()
