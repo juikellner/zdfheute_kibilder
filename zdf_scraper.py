@@ -125,7 +125,7 @@ if data:
         if f"generated_{idx}" not in st.session_state:
             st.session_state[f"generated_{idx}"] = {"prompt": None, "image_url": None}
 
-        st.image(item["image_url"], caption="Originalbild", width=400)
+        st.image(item["image_url"], caption="Originalbild", width=600)
 
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
             with st.spinner("🔍 Erzeuge Prompt..."):
@@ -134,7 +134,7 @@ if data:
 
             if prompt:
                 st.markdown("**📝 Generierter Prompt:**")
-                st.markdown(f"<div style='font-family: monospace; white-space: pre-wrap; word-wrap: break-word; background-color: #f0f0f0; padding: 1em;'>{prompt}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word; background-color: #f0f0f0; padding: 1em;'>{prompt}</div>", unsafe_allow_html=True)
 
                 with st.spinner("🎨 Erzeuge KI-Bild..."):
                     image_url = generate_image_url(prompt)
@@ -147,7 +147,7 @@ if data:
 
         if prompt:
             st.markdown("**📝 Generierter Prompt:**")
-            st.markdown(f"<div style='font-family: monospace; white-space: pre-wrap; word-wrap: break-word; background-color: #f0f0f0; padding: 1em;'>{prompt}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word; background-color: #f0f0f0; padding: 1em;'>{prompt}</div>", unsafe_allow_html=True)
 
         if image_url:
             col1, col2 = st.columns(2)
