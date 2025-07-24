@@ -88,7 +88,7 @@ def generate_prompt(headline, dachzeile, image_url):
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI."},
-                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Modell wie 'bytedance/seedream-3' geeignet sein."}
+                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Modell wie 'ideogram-ai/ideogram-v3-turbo' geeignet sein."}
             ]
         )
         return response.choices[0].message.content.strip()
@@ -96,13 +96,19 @@ def generate_prompt(headline, dachzeile, image_url):
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
         return None
 
-# Generate image with Replicate (seedream-3)
+# Generate image with Replicate (ideogram-v3-turbo)
 def generate_image(prompt):
     try:
         os.environ["REPLICATE_API_TOKEN"] = replicate_token
         output = replicate.run(
-            "bytedance/seedream-3",
-            input={"prompt": prompt}
+            "ideogram-ai/ideogram-v3-turbo",
+            input={
+                "prompt": prompt,
+                "resolution": "None",
+                "style_type": "None",
+                "aspect_ratio": "3:2",
+                "magic_prompt_option": "Auto"
+            }
         )
 
         st.markdown("**🔗 Replicate-Ausgabe:**")
