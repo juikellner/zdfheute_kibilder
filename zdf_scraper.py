@@ -113,19 +113,26 @@ def generate_image(prompt):
         st.markdown("**🔗 Replicate-Ausgabe:**")
         st.write(output)
 
-        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
+        # Normalize output: The API might return a list of URLs or a single URL string.
+        if isinstance(output, str):
+            output = [output]
+
+        if isinstance(output, list) and len(output) > 0 and output[0] and output[0].startswith("http"):
             img_url = output[0]
             try:
                 response = requests.get(img_url, timeout=20)
-                if response.status_code == 200 and "image" in response.headers.get("Content-Type", ""):
+                response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
+
+                content_type = response.headers.get("Content-Type", "")
+                if "image" in content_type:
                     image = Image.open(BytesIO(response.content))
                     return image
                 else:
-                    st.warning(f"⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer. Content-Type: {response.headers.get('Content-Type')}")
-            except Exception as e:
-                st.warning(f"Fehler beim Laden des Bildes: {e}")
+                    st.warning(f"⚠️ Der von Replicate gelieferte Link scheint kein Bild zu sein. Content-Type: {content_type}")
+            except requests.exceptions.RequestException as e:
+                st.warning(f"Fehler beim Laden des Bildes von der URL: {e}")
         else:
-            st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
+            st.warning("⚠️ Replicate hat keinen gültigen Bildlink zurückgegeben oder der Link ist leer.")
         return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
