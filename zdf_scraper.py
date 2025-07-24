@@ -134,7 +134,7 @@ if data:
 
             if prompt:
                 st.markdown("**📝 Generierter Prompt:**")
-                st.markdown(f"`{prompt}`", unsafe_allow_html=True)
+                st.code(prompt, language="text")
 
                 with st.spinner("🎨 Erzeuge KI-Bild..."):
                     image_url = generate_image_url(prompt)
@@ -147,7 +147,7 @@ if data:
 
         if prompt:
             st.markdown("**📝 Generierter Prompt:**")
-            st.markdown(f"`{prompt}`", unsafe_allow_html=True)
+            st.code(prompt, language="text")
 
         if image_url:
             col1, col2 = st.columns(2)
