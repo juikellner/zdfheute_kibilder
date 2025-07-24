@@ -109,9 +109,6 @@ def generate_image_url(prompt):
             }
         )
 
-        st.markdown("### 🔗 Raw Replicate Output:")
-        st.write(output)
-
         # Suche nach einem gültigen Bild-Link
         if isinstance(output, list):
             for item in output:
@@ -155,8 +152,11 @@ if data:
             st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{st.session_state[f'generated_{idx}']['prompt']}</div>", unsafe_allow_html=True)
 
         if st.session_state[f"generated_{idx}"]["image_url"]:
-            st.markdown("**🎨 KI-generiertes Bild:**")
             image_url = st.session_state[f"generated_{idx}"]["image_url"]
-            st.image(image_url, caption="KI-generiertes Bild", width=400)
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(item["image_url"], caption="Originalbild", width=400)
+            with col2:
+                st.image(image_url, caption="KI-generiertes Bild", width=400)
 else:
     st.warning("Keine Daten gefunden.")
