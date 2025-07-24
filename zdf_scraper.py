@@ -117,18 +117,17 @@ if data:
             prompt_key = f"prompt_{idx}"
             image_key = f"image_{idx}"
 
-            if st.button(f"📝 Prompt generieren für: {item['headline']}", key=f"btn_prompt_{idx}"):
-                with st.spinner("Erzeuge Prompt..."):
+            if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
+                with st.spinner("Erzeuge Prompt und Bild..."):
                     prompt = generate_prompt(item['headline'], item['dachzeile'])
                     st.session_state[prompt_key] = prompt
+                    if prompt:
+                        image_url = generate_image(prompt)
+                        st.session_state[image_key] = image_url
 
             if prompt_key in st.session_state:
                 st.markdown("**📝 Generierter Prompt:**")
                 st.code(st.session_state[prompt_key])
-
-                with st.spinner("Generiere Bild..."):
-                    image_url = generate_image(st.session_state[prompt_key])
-                    st.session_state[image_key] = image_url
 
             if image_key in st.session_state:
                 if isinstance(st.session_state[image_key], str) and st.session_state[image_key].startswith("http"):
