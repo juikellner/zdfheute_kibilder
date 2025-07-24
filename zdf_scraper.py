@@ -5,15 +5,19 @@ from PIL import Image
 from io import BytesIO
 import os
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
 import replicate
 
-# 🔐 API-Schlüssel aus .env oder secrets.toml laden
+# 🔐 API-Schlüssel laden
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
-os.environ["REPLICATE_API_TOKEN"] = os.getenv("REPLICATE_API_TOKEN") or st.secrets.get("REPLICATE_API_TOKEN")
+openai_api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
+replicate_token = os.getenv("REPLICATE_API_TOKEN") or st.secrets.get("REPLICATE_API_TOKEN")
 
-# 📰 ZDF Top-Teaser scrapen
+# OpenAI + Replicate initialisieren
+client = OpenAI(api_key=openai_api_key)
+os.environ["REPLICATE_API_TOKEN"] = replicate_token
+
+# Realistischer User-Agent
 headers = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -23,9 +27,9 @@ headers = {
     "Accept-Language": "de-DE,de;q=0.9"
 }
 
+# ZDF Top-Teaser scrapen
 data = []
 url = "https://www.zdf.de/nachrichten"
-
 try:
     response = requests.get(url, headers=headers, timeout=10)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -55,7 +59,7 @@ try:
 except Exception as e:
     st.error(f"Fehler beim Scraping: {e}")
 
-# 🧪 Fallback-Daten, wenn nichts gefunden
+# Fallback-Daten
 if not data:
     st.warning("Keine ZDF-Daten gefunden. Zeige Testdaten.")
     data = [{
@@ -65,7 +69,7 @@ if not data:
         "url": "https://www.zdf.de"
     }]
 
-# 📺 UI Layout
+# Streamlit UI
 st.set_page_config(page_title="ZDFheute KI-Bilder", layout="wide")
 st.title("📰 ZDFheute KI-Bilder Generator")
 
@@ -88,20 +92,19 @@ for idx, item in enumerate(data):
         prompt_key = f"prompt_{idx}"
         image_key = f"image_{idx}"
 
-        # 🎨 Prompt generieren
+        # Prompt-Generierung
         with st.form(key=f"form_prompt_{idx}"):
-            submitted = st.form_submit_button("🎨 Prompt generieren")
-            if submitted:
+            if st.form_submit_button("🎨 Prompt generieren"):
                 with st.spinner("Erzeuge Prompt..."):
                     try:
-                        completion = openai.ChatCompletion.create(
+                        chat_completion = client.chat.completions.create(
                             model="gpt-4",
                             messages=[
                                 {"role": "system", "content": "Du bist ein Prompt-Experte für fotorealistische, kinoreife Bilder."},
                                 {"role": "user", "content": f"Erstelle einen hochwertigen Bildprompt auf Basis von:\n\nDachzeile: {item['dachzeile']}\nSchlagzeile: {item['headline']}"}
                             ]
                         )
-                        prompt = completion.choices[0].message["content"]
+                        prompt = chat_completion.choices[0].message.content
                         st.session_state[prompt_key] = prompt
                     except Exception as e:
                         st.session_state[prompt_key] = f"Fehler bei Prompt-Erstellung: {e}"
@@ -109,10 +112,9 @@ for idx, item in enumerate(data):
         if prompt_key in st.session_state:
             st.text_area("Prompt", st.session_state[prompt_key], height=200)
 
-        # 🧠 KI-Bild generieren
+        # Bildgenerierung
         with st.form(key=f"form_image_{idx}"):
-            clicked = st.form_submit_button("🧠 Bild generieren")
-            if clicked and prompt_key in st.session_state:
+            if st.form_submit_button("🧠 Bild generieren") and prompt_key in st.session_state:
                 with st.spinner("Bild wird generiert..."):
                     try:
                         output = replicate.run(
