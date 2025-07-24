@@ -104,13 +104,8 @@ def generate_image_url(prompt):
         )
 
         result = output[0] if isinstance(output, list) and len(output) > 0 else output
-
-        try:
-            image_url = result.url()
-        except AttributeError:
-            image_url = result
-
-        return str(image_url)
+        image_url = str(result)  # sicherstellen, dass es ein String ist
+        return image_url
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
         return None
@@ -128,7 +123,7 @@ if data:
         if f"generated_{idx}" not in st.session_state:
             st.session_state[f"generated_{idx}"] = {"prompt": None, "image_url": None}
 
-        st.image(item["image_url"], caption="Originalbild", width=700)
+        st.image(item["image_url"], caption="Originalbild", width=800)
 
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
             with st.spinner("🔍 Erzeuge Prompt..."):
@@ -137,7 +132,7 @@ if data:
 
             if prompt:
                 st.markdown("**📝 Generierter Prompt:**")
-                st.markdown(f"<code style='font-size: 0.8rem; word-wrap: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
+                st.markdown(f"<code style='font-size: 0.75rem; word-wrap: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
 
                 with st.spinner("🎨 Erzeuge KI-Bild..."):
                     image_url = generate_image_url(prompt)
@@ -150,7 +145,7 @@ if data:
 
         if prompt:
             st.markdown("**📝 Generierter Prompt:**")
-            st.markdown(f"<code style='font-size: 0.8rem; word-wrap: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
+            st.markdown(f"<code style='font-size: 0.75rem; word-wrap: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
 
         if image_url:
             col1, col2 = st.columns(2)
