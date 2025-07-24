@@ -116,13 +116,13 @@ def generate_image(prompt):
             img_url = output[0]
             try:
                 response = requests.get(img_url, timeout=20)
-                if response.status_code == 200 and "image" in response.headers.get("Content-Type", ""):
-                    image = Image.open(BytesIO(response.content))
-                    return image
+                response.raise_for_status()
+                if "image" in response.headers.get("Content-Type", ""):
+                    return Image.open(BytesIO(response.content))
                 else:
-                    st.warning(f"⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer. Content-Type: {response.headers.get('Content-Type')}")
+                    st.warning(f"⚠️ Unerwarteter Content-Type: {response.headers.get('Content-Type')}")
             except Exception as e:
-                st.warning(f"Fehler beim Laden des Bildes: {e}")
+                st.warning(f"Fehler beim Bild-Download oder Anzeige: {e}")
         else:
             st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
         return None
@@ -135,26 +135,27 @@ data = scrape_top_articles()
 
 if data:
     for idx, item in enumerate(data):
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.image(item["image_url"], caption="Originalbild", width=300)
-        with col2:
-            st.markdown(f"### {item['headline']}")
-            st.markdown(f"**{item['dachzeile']}**")
-            st.markdown(f"🔗 [Zum Artikel]({item['url']})")
+        st.markdown("---")
+        st.markdown(f"### {item['headline']}")
+        st.markdown(f"**{item['dachzeile']}**")
+        st.markdown(f"🔗 [Zum Artikel]({item['url']})")
 
-            if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
-                with st.spinner("Erzeuge Prompt und Bild..."):
-                    prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
-                    if prompt:
-                        st.markdown("**📝 Generierter Prompt:**")
-                        st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{prompt}</div>", unsafe_allow_html=True)
-                        image = generate_image(prompt)
+        if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
+            with st.spinner("Erzeuge Prompt und Bild..."):
+                prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
+                if prompt:
+                    image = generate_image(prompt)
+                    st.markdown("**📝 Generierter Prompt:**")
+                    st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{prompt}</div>", unsafe_allow_html=True)
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.image(item["image_url"], caption="Originalbild", width=400)
+                    with col2:
                         if image:
-                            st.image(image, caption="KI-generiertes Bild", width=300)
+                            st.image(image, caption="KI-generiertes Bild", width=400)
                         else:
                             st.error("❌ Bild konnte nicht generiert werden.")
-                    else:
-                        st.error("❌ Prompt konnte nicht erzeugt werden.")
+                else:
+                    st.error("❌ Prompt konnte nicht erzeugt werden.")
 else:
     st.warning("Keine Daten gefunden.")
