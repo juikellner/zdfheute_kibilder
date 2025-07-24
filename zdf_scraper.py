@@ -30,16 +30,14 @@ def scrape_top_articles():
         teasers = soup.find_all("picture", class_="slrzex8")[:3]
         results = []
         for pic in teasers:
-            # Extract highest resolution image from <img srcset>
             img = pic.find("img")
             if not img:
                 continue
             srcset = img.get("srcset", "")
-            images = [s.strip().split(" ")[0] for s in srcset.split(",") if s.strip()]
+            images = [s.strip().split(" ")[0] for s in srcset.split(",") if s.strip() and "https://" in s]
             images = sorted(images, key=lambda x: int(x.split("~")[-1].split("x")[0]) if "~" in x else 0, reverse=True)
             img_url = images[0] if images else img.get("src")
 
-            # Extract headline, dachzeile and url
             parent = pic.find_parent("div")
             while parent and not parent.find("a"):
                 parent = parent.find_parent("div")
@@ -114,7 +112,7 @@ def generate_image(prompt):
         st.markdown("**🔗 Replicate-Ausgabe:**")
         st.write(output)
 
-        if isinstance(output, list) and len(output) > 0:
+        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
             img_url = output[0]
             try:
                 response = requests.get(img_url, timeout=20)
