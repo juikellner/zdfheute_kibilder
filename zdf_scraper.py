@@ -18,7 +18,7 @@ st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Teaser")
 
 # Hinweistext (klein und responsiv)
-st.markdown("<p style='font-size: 0.8rem; line-height: 1.4;'>🔍 Diese Anwendung nutzt GPT-4o zur Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile und der Dachzeile eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von Replicate verwendet. Das erzeugte Bild enthält keinen Text.</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 1.2rem; line-height: 1.0;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4/4o zur Bilderkennung und Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile und der Dachzeile eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von replicate.com verwendet.</p>", unsafe_allow_html=True)
 
 # Scrape top news articles from ZDFheute with best image resolution
 def scrape_top_articles():
@@ -72,7 +72,7 @@ def generate_prompt(headline, dachzeile, image_url):
         vision_response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
                 {
                     "role": "user",
                     "content": [
@@ -88,8 +88,8 @@ def generate_prompt(headline, dachzeile, image_url):
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI."},
-                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich."},
+                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
             ]
         )
         return response.choices[0].message.content.strip().replace("\n", " "), image_description
