@@ -91,12 +91,14 @@ def generate_image(prompt):
             "bytedance/seedream-3",
             input={"prompt": prompt}
         )
-        # output ist meistens ein String oder Liste mit Bild-URL
+        st.write("Replicate-Ausgabe:", output)  # Debug-Ausgabe anzeigen
+
         if isinstance(output, str) and output.startswith("http"):
             return output
         elif isinstance(output, list) and output and isinstance(output[0], str):
             return output[0]
         else:
+            st.warning("Ausgabe von Replicate ist leer oder ungültig.")
             return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
