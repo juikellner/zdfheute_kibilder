@@ -18,7 +18,7 @@ st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Teaser")
 
 # Hinweistext (klein und responsiv)
-st.markdown("<p style='font-size: 0.8rem; line-height: 3.8;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o zur Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile und der Dachzeile eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von Replicate verwendet.</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 1.0rem; line-height: 1.0;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o zur Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile und der Dachzeile eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von Replicate verwendet.</p>", unsafe_allow_html=True)
 
 # Scrape top news articles from ZDFheute with best image resolution
 def scrape_top_articles():
