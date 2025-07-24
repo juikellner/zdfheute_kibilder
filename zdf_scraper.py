@@ -109,7 +109,10 @@ def generate_image(prompt):
             }
         )
 
-        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
+        st.markdown("**📤 Raw Replicate Output:**")
+        st.write(output)
+
+        if isinstance(output, list) and len(output) > 0 and output[0] and output[0].startswith("http"):
             img_url = output[0]
             try:
                 response = requests.get(img_url, timeout=20)
@@ -140,13 +143,14 @@ if data:
         if f"generated_{idx}" not in st.session_state:
             st.session_state[f"generated_{idx}"] = {"prompt": None, "image": None}
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.image(item["image_url"], caption="Originalbild", width=400)
-
-        with col2:
-            if st.session_state[f"generated_{idx}"]["image"]:
+        if st.session_state[f"generated_{idx}"]["image"]:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(item["image_url"], caption="Originalbild", width=400)
+            with col2:
                 st.image(st.session_state[f"generated_{idx}"]["image"], caption="KI-generiertes Bild", width=400)
+        else:
+            st.image(item["image_url"], caption="Originalbild", width=400)
 
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
             with st.spinner("Erzeuge Prompt und Bild..."):
