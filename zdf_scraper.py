@@ -94,9 +94,12 @@ def generate_image(prompt):
         st.write("Replicate-Ausgabe:", output)  # Debug-Ausgabe anzeigen
 
         if isinstance(output, str) and output.startswith("http"):
-            return output
-        elif isinstance(output, list) and output and isinstance(output[0], str) and output[0].startswith("http"):
-            return output[0]
+            img_response = requests.get(output, timeout=20)
+            if img_response.status_code == 200:
+                return BytesIO(img_response.content)
+            else:
+                st.warning("Bild konnte nicht geladen werden.")
+                return None
         else:
             st.warning("Ausgabe von Replicate ist leer oder ungültig.")
             return None
@@ -123,9 +126,9 @@ if data:
                     if prompt:
                         st.markdown("**📝 Generierter Prompt:**")
                         st.code(prompt)
-                        image_url = generate_image(prompt)
-                        if image_url:
-                            st.image(image_url, caption="KI-generiertes Bild", use_container_width=True)
+                        image_data = generate_image(prompt)
+                        if image_data:
+                            st.image(image_data, caption="KI-generiertes Bild", use_container_width=True)
                         else:
                             st.error("❌ Bild konnte nicht generiert werden.")
                     else:
