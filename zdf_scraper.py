@@ -89,14 +89,13 @@ def generate_image(prompt):
         os.environ["REPLICATE_API_TOKEN"] = replicate_token
         output = replicate.run(
             "bytedance/seedream-3",
-            input={
-                "prompt": prompt
-            }
+            input={"prompt": prompt}
         )
-        if isinstance(output, list) and output:
-            return output[0]
-        elif isinstance(output, str):
+        # output ist meistens ein String oder Liste mit Bild-URL
+        if isinstance(output, str) and output.startswith("http"):
             return output
+        elif isinstance(output, list) and output and isinstance(output[0], str):
+            return output[0]
         else:
             return None
     except Exception as e:
