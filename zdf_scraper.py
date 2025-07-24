@@ -105,23 +105,35 @@ def generate_image(prompt):
 data = scrape_top_articles()
 
 if data:
-    for item in data:
+    for idx, item in enumerate(data):
         col1, col2 = st.columns([1, 2])
         with col1:
-            st.image(item["image_url"], use_column_width=True)
+            st.image(item["image_url"], use_container_width=True)
         with col2:
             st.markdown(f"### {item['headline']}")
             st.markdown(f"**{item['dachzeile']}**")
             st.markdown(f"🔗 [Zum Artikel]({item['url']})")
-            if st.button(f"🎨 Bild generieren für: {item['headline']}", key=item['headline']):
+
+            prompt_key = f"prompt_{idx}"
+            image_key = f"image_{idx}"
+
+            if st.button(f"📝 Prompt generieren für: {item['headline']}", key=f"btn_prompt_{idx}"):
                 with st.spinner("Erzeuge Prompt..."):
                     prompt = generate_prompt(item['headline'], item['dachzeile'])
-                if prompt:
-                    st.markdown("**📝 Generierter Prompt:**")
-                    st.code(prompt)
-                    with st.spinner("Generiere Bild..."):
-                        image_url = generate_image(prompt)
-                    if image_url:
-                        st.image(image_url, caption="KI-generiertes Bild", use_column_width=True)
+                    st.session_state[prompt_key] = prompt
+
+            if prompt_key in st.session_state:
+                st.markdown("**📝 Generierter Prompt:**")
+                st.code(st.session_state[prompt_key])
+
+                with st.spinner("Generiere Bild..."):
+                    image_url = generate_image(st.session_state[prompt_key])
+                    st.session_state[image_key] = image_url
+
+            if image_key in st.session_state:
+                if isinstance(st.session_state[image_key], str) and st.session_state[image_key].startswith("http"):
+                    st.image(st.session_state[image_key], caption="KI-generiertes Bild", use_container_width=True)
+                else:
+                    st.error("Kein gültiges Bild erzeugt.")
 else:
     st.warning("Keine Daten gefunden.")
