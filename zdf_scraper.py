@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 from PIL import Image, UnidentifiedImageError
-from io import BytesIO # Ensure BytesIO is imported
+from io import BytesIO
 import os
 from dotenv import load_dotenv
 import openai
