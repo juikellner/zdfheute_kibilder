@@ -96,7 +96,7 @@ def generate_image(prompt):
                 "safety_filter_level": "block_only_high"
             }
         )
-        return output
+        return output[0] if isinstance(output, list) and output else None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
         return None
