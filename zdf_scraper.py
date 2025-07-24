@@ -17,7 +17,7 @@ replicate_token = os.getenv("REPLICATE_API_TOKEN")
 st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Bilder Generator")
 
-# Scrape top news articles from ZDFheute
+# Scrape top news articles from ZDFheute with best image resolution
 def scrape_top_articles():
     url = "https://www.zdfheute.de/"
     headers = {
@@ -30,19 +30,16 @@ def scrape_top_articles():
         teasers = soup.find_all("picture", class_="slrzex8")[:3]
         results = []
         for pic in teasers:
-            # Get largest image from srcset
+            # Extract highest resolution image from <img srcset>
             img = pic.find("img")
             if not img:
                 continue
             srcset = img.get("srcset", "")
-            largest_img = sorted(
-                [s.split(" ")[0] for s in srcset.split(",") if s.strip()],
-                key=lambda x: int(x.split("~")[-1].split("x")[0]) if "~" in x else 0,
-                reverse=True
-            )
-            img_url = largest_img[0] if largest_img else img.get("src")
+            images = [s.strip().split(" ")[0] for s in srcset.split(",") if s.strip()]
+            images = sorted(images, key=lambda x: int(x.split("~")[-1].split("x")[0]) if "~" in x else 0, reverse=True)
+            img_url = images[0] if images else img.get("src")
 
-            # Try to get title and link
+            # Extract headline, dachzeile and url
             parent = pic.find_parent("div")
             while parent and not parent.find("a"):
                 parent = parent.find_parent("div")
@@ -115,15 +112,15 @@ def generate_image(prompt):
             img_url = output[0]
             try:
                 response = requests.get(img_url, timeout=20)
-                if response.status_code == 200:
+                if response.status_code == 200 and "image" in response.headers.get("Content-Type", ""):
                     image = Image.open(BytesIO(response.content))
                     return image
                 else:
-                    st.warning(f"Bild konnte nicht geladen werden. Statuscode: {response.status_code}")
+                    st.warning(f"Kein gültiges Bild geladen. Status: {response.status_code} Content-Type: {response.headers.get('Content-Type')}")
             except Exception as e:
                 st.warning(f"Fehler beim Laden des Bildes: {e}")
         else:
-            st.warning("Ausgabe von Replicate ist leer oder ungültig.")
+            st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben.")
         return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
