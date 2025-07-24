@@ -100,16 +100,12 @@ def generate_image_url(prompt):
         os.environ["REPLICATE_API_TOKEN"] = replicate_token
         output = replicate.run(
             "ideogram-ai/ideogram-v3-turbo",
-            input={
-                "prompt": prompt,
-                "resolution": "None",
-                "style_type": "None",
-                "aspect_ratio": "3:2",
-                "magic_prompt_option": "Auto"
-            }
+            input={"prompt": prompt, "aspect_ratio": "3:2"}
         )
 
-        # Suche nach einem gültigen Bild-Link
+        if hasattr(output, "url"):
+            return output.url()
+
         if isinstance(output, list):
             for item in output:
                 if isinstance(item, str) and item.startswith("http"):
@@ -140,23 +136,27 @@ if data:
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
             with st.spinner("Erzeuge Prompt und Bild-Link..."):
                 prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
+                image_url = None
                 if prompt:
                     image_url = generate_image_url(prompt)
-                    st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image_url": image_url}
-                else:
-                    st.error("❌ Prompt konnte nicht erzeugt werden.")
+                st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image_url": image_url}
             st.rerun()
 
-        if st.session_state[f"generated_{idx}"]["prompt"]:
-            st.markdown("**📝 Generierter Prompt:**")
-            st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{st.session_state[f'generated_{idx}']['prompt']}</div>", unsafe_allow_html=True)
+        generated = st.session_state.get(f"generated_{idx}", {})
+        prompt = generated.get("prompt")
+        image_url = generated.get("image_url")
 
-        if st.session_state[f"generated_{idx}"]["image_url"]:
-            image_url = st.session_state[f"generated_{idx}"]["image_url"]
+        if prompt:
+            st.markdown("**📝 Generierter Prompt:**")
+            st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{prompt}</div>", unsafe_allow_html=True)
+
+        if image_url:
             col1, col2 = st.columns(2)
             with col1:
                 st.image(item["image_url"], caption="Originalbild", width=400)
             with col2:
                 st.image(image_url, caption="KI-generiertes Bild", width=400)
+        elif prompt:
+            st.info("⚠️ Kein KI-Bildlink von Replicate erhalten.")
 else:
     st.warning("Keine Daten gefunden.")
