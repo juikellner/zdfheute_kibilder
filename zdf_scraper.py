@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 from PIL import Image, UnidentifiedImageError
-from io import BytesIO
+from io import BytesIO # Ensure BytesIO is imported
 import os
 from dotenv import load_dotenv
 import openai
@@ -113,7 +113,19 @@ def generate_image(prompt):
         st.write(output)
 
         if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
-            return output[0]  # return the URL directly
+            image_url = output[0]
+            try:
+                # Download the image content
+                image_response = requests.get(image_url, timeout=10)
+                image_response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+                return BytesIO(image_response.content) # Return image content as BytesIO object
+            except requests.exceptions.RequestException as req_e:
+                st.error(f"Fehler beim Herunterladen des Bildes: {req_e}")
+                return None
+            except UnidentifiedImageError:
+                st.error("Fehler: Konnte das heruntergeladene Bild nicht identifizieren. Möglicherweise ist die Datei beschädigt oder kein gültiges Bildformat.")
+                return None
+
 
         st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
         return None
@@ -139,6 +151,7 @@ if data:
             with col1:
                 st.image(item["image_url"], caption="Originalbild", width=400)
             with col2:
+                # Pass the BytesIO object directly to st.image
                 st.image(st.session_state[f"generated_{idx}"]["image_url"], caption="KI-generiertes Bild", width=400)
         else:
             st.image(item["image_url"], caption="Originalbild", width=400)
@@ -147,8 +160,8 @@ if data:
             with st.spinner("Erzeuge Prompt und Bild..."):
                 prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                 if prompt:
-                    image_url = generate_image(prompt)
-                    st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image_url": image_url}
+                    image_data = generate_image(prompt) # Now image_data will be BytesIO object
+                    st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image_url": image_data}
                 else:
                     st.error("❌ Prompt konnte nicht erzeugt werden.")
             st.rerun()
