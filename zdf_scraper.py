@@ -112,24 +112,13 @@ def generate_image(prompt):
         st.markdown("### 🧪 Raw Replicate Output:")
         st.write(output)
 
-        # WICHTIGE ANPASSUNG: .strip() hinzufügen, um unsichtbare Leerzeichen zu entfernen
+        # Wenn ein Link vorhanden ist, diesen direkt zurückgeben (nachdem Leerzeichen entfernt wurden)
         if isinstance(output, list) and len(output) > 0 and output[0].strip().startswith("http"):
-            image_url = output[0].strip() # Auch hier trimmen
-            try:
-                # Download the image content
-                image_response = requests.get(image_url, timeout=10)
-                image_response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
-                return BytesIO(image_response.content) # Return image content as BytesIO object
-            except requests.exceptions.RequestException as req_e:
-                st.error(f"Fehler beim Herunterladen des Bildes: {req_e}")
-                return None
-            except UnidentifiedImageError:
-                st.error("Fehler: Konnte das heruntergeladene Bild nicht identifizieren. Möglicherweise ist die Datei beschädigt oder kein gültiges Bildformat.")
-                return None
-
-
-        st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
-        return None
+            image_url = output[0].strip()
+            return image_url # Gibt den URL-String direkt zurück
+        else:
+            st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
+            return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
         return None
@@ -152,8 +141,10 @@ if data:
             with col1:
                 st.image(item["image_url"], caption="Originalbild", width=400)
             with col2:
-                # Pass the BytesIO object directly to st.image
-                st.image(st.session_state[f"generated_{idx}"]["image_url"], caption="KI-generiertes Bild", width=400)
+                st.markdown(f"**KI-generiertes Bild Link:**")
+                # Zeigt den Link als klickbaren Markdown-Link an
+                st.markdown(f"[{st.session_state[f'generated_{idx}']['image_url']}]({st.session_state[f'generated_{idx}']['image_url']})")
+                st.markdown("Klicken Sie auf den Link, um das KI-generierte Bild in einem neuen Tab zu öffnen.")
         else:
             st.image(item["image_url"], caption="Originalbild", width=400)
 
@@ -161,8 +152,9 @@ if data:
             with st.spinner("Erzeuge Prompt und Bild..."):
                 prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                 if prompt:
-                    image_data = generate_image(prompt) # Now image_data will be BytesIO object
-                    st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image_url": image_data}
+                    # image_url wird jetzt der URL-String sein
+                    image_url = generate_image(prompt)
+                    st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image_url": image_url}
                 else:
                     st.error("❌ Prompt konnte nicht erzeugt werden.")
             st.rerun()
