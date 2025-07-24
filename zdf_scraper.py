@@ -112,8 +112,9 @@ def generate_image(prompt):
         st.markdown("### 🧪 Raw Replicate Output:")
         st.write(output)
 
-        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
-            image_url = output[0]
+        # WICHTIGE ANPASSUNG: .strip() hinzufügen, um unsichtbare Leerzeichen zu entfernen
+        if isinstance(output, list) and len(output) > 0 and output[0].strip().startswith("http"):
+            image_url = output[0].strip() # Auch hier trimmen
             try:
                 # Download the image content
                 image_response = requests.get(image_url, timeout=10)
