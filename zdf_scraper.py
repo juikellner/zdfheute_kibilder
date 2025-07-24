@@ -109,9 +109,6 @@ def generate_image(prompt):
             }
         )
 
-        st.markdown("**🔗 Replicate-Ausgabe:**")
-        st.write(output)
-
         if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
             img_url = output[0]
             try:
@@ -139,6 +136,7 @@ if data:
         st.markdown(f"### {item['headline']}")
         st.markdown(f"**{item['dachzeile']}**")
         st.markdown(f"🔗 [Zum Artikel]({item['url']})")
+        st.image(item["image_url"], caption="Originalbild", width=400)
 
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
             with st.spinner("Erzeuge Prompt und Bild..."):
