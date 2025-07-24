@@ -122,7 +122,7 @@ def generate_image(prompt):
                     image = Image.open(BytesIO(response.content))
                     return image
                 else:
-                    st.warning(f"Kein gültiges Bild geladen. Status: {response.status_code} Content-Type: {response.headers.get('Content-Type')}")
+                    st.warning(f"⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer. Content-Type: {response.headers.get('Content-Type')}")
             except Exception as e:
                 st.warning(f"Fehler beim Laden des Bildes: {e}")
         else:
