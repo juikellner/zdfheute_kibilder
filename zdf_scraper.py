@@ -136,24 +136,30 @@ if data:
         st.markdown(f"### {item['headline']}")
         st.markdown(f"**{item['dachzeile']}**")
         st.markdown(f"🔗 [Zum Artikel]({item['url']})")
-        st.image(item["image_url"], caption="Originalbild", width=400)
+
+        if f"generated_{idx}" not in st.session_state:
+            st.session_state[f"generated_{idx}"] = {"prompt": None, "image": None}
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(item["image_url"], caption="Originalbild", width=400)
+
+        with col2:
+            if st.session_state[f"generated_{idx}"]["image"]:
+                st.image(st.session_state[f"generated_{idx}"]["image"], caption="KI-generiertes Bild", width=400)
 
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
             with st.spinner("Erzeuge Prompt und Bild..."):
                 prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                 if prompt:
                     image = generate_image(prompt)
-                    st.markdown("**📝 Generierter Prompt:**")
-                    st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{prompt}</div>", unsafe_allow_html=True)
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.image(item["image_url"], caption="Originalbild", width=400)
-                    with col2:
-                        if image:
-                            st.image(image, caption="KI-generiertes Bild", width=400)
-                        else:
-                            st.error("❌ Bild konnte nicht generiert werden.")
+                    st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image": image}
                 else:
                     st.error("❌ Prompt konnte nicht erzeugt werden.")
+            st.rerun()
+
+        if st.session_state[f"generated_{idx}"]["prompt"]:
+            st.markdown("**📝 Generierter Prompt:**")
+            st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{st.session_state[f'generated_{idx}']['prompt']}</div>", unsafe_allow_html=True)
 else:
     st.warning("Keine Daten gefunden.")
