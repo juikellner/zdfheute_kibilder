@@ -103,11 +103,13 @@ def generate_image_url(prompt):
             input={"prompt": prompt, "aspect_ratio": "3:2"}
         )
 
-        if isinstance(output, str):
-            return output
-        if isinstance(output, list) and len(output) > 0 and isinstance(output[0], str):
-            return output[0]
-        return None
+        result = output[0] if isinstance(output, list) and len(output) > 0 else output
+
+        try:
+            return str(result.url())  # falls result ein Objekt mit url() ist
+        except AttributeError:
+            return str(result)        # falls result ein String ist
+
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
         return None
