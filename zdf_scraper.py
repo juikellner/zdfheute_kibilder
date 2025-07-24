@@ -69,7 +69,6 @@ def scrape_top_articles():
         return []
 
 # Generate image prompt using OpenAI
-
 def generate_prompt(headline, dachzeile, image_url):
     try:
         vision_response = openai.chat.completions.create(
@@ -109,7 +108,8 @@ def generate_image(prompt):
             input={"prompt": prompt}
         )
 
-        st.write("Replicate-Ausgabe:", output)
+        st.markdown("**🔗 Replicate-Ausgabe:**")
+        st.write(output)
 
         if isinstance(output, list) and len(output) > 0:
             img_url = output[0]
@@ -117,27 +117,26 @@ def generate_image(prompt):
                 response = requests.get(img_url, timeout=20)
                 if response.status_code == 200:
                     image = Image.open(BytesIO(response.content))
-                    st.image(image, caption="KI-generiertes Bild", use_container_width=True)
-                    return True
+                    return image
                 else:
                     st.warning(f"Bild konnte nicht geladen werden. Statuscode: {response.status_code}")
             except Exception as e:
                 st.warning(f"Fehler beim Laden des Bildes: {e}")
         else:
             st.warning("Ausgabe von Replicate ist leer oder ungültig.")
-        return False
+        return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
-        return False
+        return None
 
 # MAIN APP FLOW
 data = scrape_top_articles()
 
 if data:
     for idx, item in enumerate(data):
-        col1, col2 = st.columns([1, 2])
+        col1, col2 = st.columns(2)
         with col1:
-            st.image(item["image_url"], use_container_width=True)
+            st.image(item["image_url"], caption="Originalbild", use_container_width=True)
         with col2:
             st.markdown(f"### {item['headline']}")
             st.markdown(f"**{item['dachzeile']}**")
@@ -149,8 +148,10 @@ if data:
                     if prompt:
                         st.markdown("**📝 Generierter Prompt:**")
                         st.code(prompt)
-                        success = generate_image(prompt)
-                        if not success:
+                        image = generate_image(prompt)
+                        if image:
+                            st.image(image, caption="KI-generiertes Bild", use_container_width=True)
+                        else:
                             st.error("❌ Bild konnte nicht generiert werden.")
                     else:
                         st.error("❌ Prompt konnte nicht erzeugt werden.")
