@@ -138,7 +138,7 @@ if data:
     for idx, item in enumerate(data):
         col1, col2 = st.columns([1, 2])
         with col1:
-            st.image(item["image_url"], caption="Originalbild", use_container_width=True)
+            st.image(item["image_url"], caption="Originalbild", width=300)
         with col2:
             st.markdown(f"### {item['headline']}")
             st.markdown(f"**{item['dachzeile']}**")
@@ -152,7 +152,7 @@ if data:
                         st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{prompt}</div>", unsafe_allow_html=True)
                         image = generate_image(prompt)
                         if image:
-                            st.image(image, caption="KI-generiertes Bild", width=400)
+                            st.image(image, caption="KI-generiertes Bild", width=300)
                         else:
                             st.error("❌ Bild konnte nicht generiert werden.")
                     else:
