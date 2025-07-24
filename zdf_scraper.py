@@ -13,34 +13,53 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
 replicate_token = os.getenv("REPLICATE_API_TOKEN") or st.secrets.get("REPLICATE_API_TOKEN")
 
-# 👉 API-Schlüssel setzen
+# 👉 API-Keys setzen
 openai.api_key = openai_api_key
 os.environ["REPLICATE_API_TOKEN"] = replicate_token
 
-# 👉 ZDF-Nachrichten abrufen
+# 👉 ZDF-Daten abrufen
 url = "https://www.zdf.de/nachrichten"
-headers = {"User-Agent": "Mozilla/5.0"}
-response = requests.get(url, headers=headers)
-soup = BeautifulSoup(response.content, "html.parser")
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+}
 
-articles = soup.find_all("article", class_="news-teaser-item")
 data = []
+try:
+    response = requests.get(url, headers=headers, timeout=10)
+    st.write(f"ZDF Statuscode: {response.status_code}")
+    soup = BeautifulSoup(response.content, "html.parser")
+    articles = soup.find_all("article", class_="news-teaser-item")
+    st.write(f"Gefundene Artikel: {len(articles)}")
 
-for article in articles[:3]:  # Nur die ersten 3 Artikel
-    img_tag = article.find("img")
-    headline_tag = article.find("span", class_="news-teaser-item__title")
-    dachzeile_tag = article.find("span", class_="news-teaser-item__eyecatcher")
+    for article in articles[:3]:
+        img_tag = article.find("img")
+        headline_tag = article.find("span", class_="news-teaser-item__title")
+        dachzeile_tag = article.find("span", class_="news-teaser-item__eyecatcher")
 
-    image_url = img_tag["src"] if img_tag and "src" in img_tag.attrs else None
-    headline = headline_tag.text.strip() if headline_tag else "[Keine Schlagzeile]"
-    dachzeile = dachzeile_tag.text.strip() if dachzeile_tag else "[Keine Dachzeile]"
+        image_url = img_tag["src"] if img_tag and "src" in img_tag.attrs else None
+        headline = headline_tag.text.strip() if headline_tag else "[Keine Schlagzeile]"
+        dachzeile = dachzeile_tag.text.strip() if dachzeile_tag else "[Keine Dachzeile]"
 
-    if image_url:
-        data.append({
-            "image_url": image_url,
-            "headline": headline,
-            "dachzeile": dachzeile
-        })
+        if image_url:
+            data.append({
+                "image_url": image_url,
+                "headline": headline,
+                "dachzeile": dachzeile
+            })
+
+except Exception as e:
+    st.error(f"Fehler beim Abrufen der ZDF-Seite: {e}")
+
+# 👉 Fallback bei leerem Ergebnis
+if not data:
+    st.warning("Konnte keine Live-Daten von ZDF abrufen. Zeige stattdessen Testdaten.")
+    data = [
+        {
+            "image_url": "https://via.placeholder.com/600x300.png?text=ZDF-Testbild",
+            "headline": "Test-Schlagzeile: KI verändert alles",
+            "dachzeile": "Technologie"
+        }
+    ]
 
 # 👉 Streamlit UI
 st.set_page_config(page_title="ZDFheute KI-Bilder", layout="wide")
@@ -52,18 +71,18 @@ for idx, entry in enumerate(data):
 
     with cols[0]:
         try:
-            response = requests.get(entry["image_url"], headers=headers, timeout=10)
-            if response.status_code == 200:
-                image = Image.open(BytesIO(response.content))
+            img_response = requests.get(entry["image_url"], headers=headers, timeout=10)
+            if img_response.status_code == 200:
+                image = Image.open(BytesIO(img_response.content))
                 st.image(image, caption="Originalbild", use_container_width=True)
             else:
-                st.warning(f"Bild konnte nicht geladen werden (Statuscode: {response.status_code})")
+                st.warning(f"Bild konnte nicht geladen werden (Statuscode: {img_response.status_code})")
         except Exception as e:
             st.error(f"Fehler beim Laden des Bildes: {e}")
 
     with cols[1]:
-        st.subheader(entry.get("headline", "[Keine Schlagzeile]"))
-        st.caption(entry.get("dachzeile", "[Keine Dachzeile]"))
+        st.subheader(entry["headline"])
+        st.caption(entry["dachzeile"])
 
         prompt_key = f"prompt_{idx}"
         image_key = f"image_{idx}"
@@ -78,30 +97,32 @@ for idx, entry in enumerate(data):
                             model="gpt-4",
                             messages=[
                                 {"role": "system", "content": "Du bist ein Prompt-Experte für fotorealistische, kinoreife Bilder."},
-                                {"role": "user", "content": f"Erstelle einen hochwertigen Replicate-Prompt basierend auf:\nDachzeile: {entry['dachzeile']}\nSchlagzeile: {entry['headline']}"}
+                                {"role": "user", "content": f"Erstelle einen hochwertigen Replicate-Prompt auf Basis von:\n\nDachzeile: {entry['dachzeile']}\nSchlagzeile: {entry['headline']}"}
                             ]
                         )
-                        st.session_state[prompt_key] = completion.choices[0].message["content"]
+                        prompt = completion.choices[0].message["content"]
+                        st.session_state[prompt_key] = prompt
                     except Exception as e:
                         st.session_state[prompt_key] = f"Fehler bei Prompt-Erstellung: {e}"
 
         if prompt_key in st.session_state:
             st.text_area("Prompt", st.session_state[prompt_key], height=200)
 
-        # 👉 Bildgenerierung mit Replicate
+        # 👉 Bildgenerierung
         with st.form(key=f"form_image_{idx}"):
             submitted_image = st.form_submit_button("🧠 Bild generieren")
             if submitted_image and prompt_key in st.session_state:
                 with st.spinner("Generiere Bild über Replicate..."):
                     try:
                         output = replicate.run(
-                            "stability-ai/sdxl",
+                            "stability-ai/sdxl",  # Alternativ: "cjwbw/anything-v4.0" o. ä.
                             input={"prompt": st.session_state[prompt_key]}
                         )
                         st.session_state[image_key] = output[0] if isinstance(output, list) else output
                     except Exception as e:
                         st.session_state[image_key] = f"Fehler: {e}"
 
+        # 👉 Anzeige des KI-generierten Bildes
         if image_key in st.session_state:
             if isinstance(st.session_state[image_key], str) and st.session_state[image_key].startswith("http"):
                 st.image(st.session_state[image_key], caption="KI-generiertes Bild", use_container_width=True)
