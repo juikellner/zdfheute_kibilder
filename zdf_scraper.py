@@ -73,7 +73,7 @@ def scrape_top_articles():
 def generate_prompt(headline, dachzeile, image_url):
     try:
         vision_response = openai.chat.completions.create(
-            model="gpt-4-vision-preview",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
                 {
