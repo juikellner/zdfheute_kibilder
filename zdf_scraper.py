@@ -69,13 +69,30 @@ def scrape_top_articles():
         return []
 
 # Generate image prompt using OpenAI
-def generate_prompt(headline, dachzeile):
+
+def generate_prompt(headline, dachzeile, image_url):
     try:
+        vision_response = openai.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=[
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": image_url}},
+                        {"type": "text", "text": f"Bitte analysiere das Bild."}
+                    ]
+                }
+            ],
+            max_tokens=1000
+        )
+        image_description = vision_response.choices[0].message.content.strip()
+
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI."},
-                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nDer Prompt soll für ein fotorealistisches Text-zu-Bild-Modell wie 'bytedance/seedream-3' geeignet sein. Schreibe den Prompt auf Englisch."}
+                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Modell wie 'bytedance/seedream-3' geeignet sein."}
             ]
         )
         return response.choices[0].message.content.strip()
@@ -128,7 +145,7 @@ if data:
 
             if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
                 with st.spinner("Erzeuge Prompt und Bild..."):
-                    prompt = generate_prompt(item['headline'], item['dachzeile'])
+                    prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                     if prompt:
                         st.markdown("**📝 Generierter Prompt:**")
                         st.code(prompt)
