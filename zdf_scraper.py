@@ -108,8 +108,18 @@ def generate_image_url(prompt):
                 "magic_prompt_option": "Auto"
             }
         )
-        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
-            return output[0]
+
+        st.markdown("### 🔗 Raw Replicate Output:")
+        st.write(output)
+
+        # Suche nach einem gültigen Bild-Link
+        if isinstance(output, list):
+            for item in output:
+                if isinstance(item, str) and item.startswith("http"):
+                    return item
+        elif isinstance(output, str) and output.startswith("http"):
+            return output
+
         return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
@@ -147,7 +157,6 @@ if data:
         if st.session_state[f"generated_{idx}"]["image_url"]:
             st.markdown("**🎨 KI-generiertes Bild:**")
             image_url = st.session_state[f"generated_{idx}"]["image_url"]
-            st.markdown(f"[🔗 Bild öffnen]({image_url})")
-            st.image(image_url, width=400)
+            st.image(image_url, caption="KI-generiertes Bild", width=400)
 else:
     st.warning("Keine Daten gefunden.")
