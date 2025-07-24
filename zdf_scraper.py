@@ -120,7 +120,7 @@ def generate_image(prompt):
             except Exception as e:
                 st.warning(f"Fehler beim Laden des Bildes: {e}")
         else:
-            st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben.")
+            st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
         return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
