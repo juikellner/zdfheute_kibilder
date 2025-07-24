@@ -103,14 +103,10 @@ def generate_image_url(prompt):
             input={"prompt": prompt, "aspect_ratio": "3:2"}
         )
 
-        # If output is a string, return it directly
         if isinstance(output, str):
             return output
-
-        # If output is a list, return first valid URL
         if isinstance(output, list) and len(output) > 0 and isinstance(output[0], str):
             return output[0]
-
         return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
@@ -137,6 +133,9 @@ if data:
                 st.session_state[f"generated_{idx}"]["prompt"] = prompt
 
             if prompt:
+                st.markdown("**📝 Generierter Prompt:**")
+                st.code(prompt)
+
                 with st.spinner("🎨 Erzeuge KI-Bild..."):
                     image_url = generate_image_url(prompt)
                     st.session_state[f"generated_{idx}"]["image_url"] = image_url
@@ -148,7 +147,7 @@ if data:
 
         if prompt:
             st.markdown("**📝 Generierter Prompt:**")
-            st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{prompt}</div>", unsafe_allow_html=True)
+            st.code(prompt)
 
         if image_url:
             col1, col2 = st.columns(2)
