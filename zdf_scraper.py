@@ -80,7 +80,7 @@ def generate_prompt(headline, dachzeile, image_url):
             ],
             max_tokens=1000
         )
-        image_description = vision_response.choices[0].message.content.strip()
+        image_description = vision_response.choices[0].message.content.strip().replace("\n", " ")
 
         response = openai.chat.completions.create(
             model="gpt-4",
@@ -89,7 +89,7 @@ def generate_prompt(headline, dachzeile, image_url):
                 {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Modell wie 'ideogram-ai/ideogram-v3-turbo' geeignet sein."}
             ]
         )
-        return response.choices[0].message.content.strip()
+        return response.choices[0].message.content.strip().replace("\n", " ")
     except Exception as e:
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
         return None
@@ -104,7 +104,7 @@ def generate_image_url(prompt):
         )
 
         result = output[0] if isinstance(output, list) and len(output) > 0 else output
-        image_url = str(result)  # sicherstellen, dass es ein String ist
+        image_url = str(result)
         return image_url
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
@@ -132,7 +132,7 @@ if data:
 
             if prompt:
                 st.markdown("**📝 Generierter Prompt:**")
-                st.markdown(f"<code style='font-size: 0.75rem; word-wrap: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
+                st.markdown(f"<code style='font-size: 0.7rem; word-break: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
 
                 with st.spinner("🎨 Erzeuge KI-Bild..."):
                     image_url = generate_image_url(prompt)
@@ -145,14 +145,14 @@ if data:
 
         if prompt:
             st.markdown("**📝 Generierter Prompt:**")
-            st.markdown(f"<code style='font-size: 0.75rem; word-wrap: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
+            st.markdown(f"<code style='font-size: 0.7rem; word-break: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
 
         if image_url:
             col1, col2 = st.columns(2)
             with col1:
-                st.image(item["image_url"], caption="Originalbild", width=400)
+                st.image(item["image_url"], caption="Originalbild", width=800)
             with col2:
-                st.image(image_url, caption="KI-generiertes Bild", width=400)
+                st.image(image_url, caption="KI-generiertes Bild", width=800)
         elif prompt:
             st.info("⚠️ Kein KI-Bildlink von Replicate erhalten.")
 else:
