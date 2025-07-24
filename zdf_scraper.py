@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 import os
 from dotenv import load_dotenv
@@ -121,16 +121,16 @@ def generate_image(prompt):
             img_url = output[0]
             try:
                 response = requests.get(img_url, timeout=20)
-                response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
-
-                content_type = response.headers.get("Content-Type", "")
-                if "image" in content_type:
-                    image = Image.open(BytesIO(response.content))
-                    return image
-                else:
-                    st.warning(f"⚠️ Der von Replicate gelieferte Link scheint kein Bild zu sein. Content-Type: {content_type}")
+                response.raise_for_status()  # Prüft auf Download-Fehler (z.B. 404 Not Found)
+                
+                # Versuche direkt, das Bild zu öffnen. Das ist zuverlässiger als der Content-Type-Header.
+                # Pillow (PIL) wirft einen Fehler, wenn die Daten kein gültiges Bild sind.
+                image = Image.open(BytesIO(response.content))
+                return image
             except requests.exceptions.RequestException as e:
-                st.warning(f"Fehler beim Laden des Bildes von der URL: {e}")
+                st.warning(f"Fehler beim Herunterladen des Bildes von der URL: {e}")
+            except UnidentifiedImageError:
+                st.warning(f"⚠️ Die Daten von der URL konnten nicht als Bild erkannt werden. URL: {img_url}")
         else:
             st.warning("⚠️ Replicate hat keinen gültigen Bildlink zurückgegeben oder der Link ist leer.")
         return None
