@@ -64,6 +64,7 @@ def scrape_top_articles():
         return []
 
 # Generate image prompt using OpenAI
+
 def generate_prompt(headline, dachzeile, image_url):
     try:
         vision_response = openai.chat.completions.create(
@@ -112,49 +113,89 @@ def generate_image(prompt):
         st.markdown("**🔗 Replicate-Ausgabe:**")
         st.write(output)
 
-        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
+        # Normalize output: The API might return a list of URLs or a single URL string.
+        if isinstance(output, str):
+            output = [output]
+
+        if isinstance(output, list) and len(output) > 0 and output[0] and output[0].startswith("http"):
             img_url = output[0]
             try:
                 response = requests.get(img_url, timeout=20)
-                if response.status_code == 200 and "image" in response.headers.get("Content-Type", ""):
-                    image = Image.open(BytesIO(response.content))
-                    return image
-                else:
-                    st.warning(f"⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer. Content-Type: {response.headers.get('Content-Type')}")
+                response.raise_for_status()  # Löst einen Fehler bei schlechtem Statuscode aus (z.B. 404, 500)
+
+                image_bytes = response.content
+                if not image_bytes:
+                    st.warning(f"⚠️ Heruntergeladene Datei von {img_url} ist leer.")
+                    return None
+
+                # Dies ist die zuverlässigste Validierung: Versuche, die Bytes als Bild zu öffnen.
+                image = Image.open(BytesIO(image_bytes))
+                return image
+            except requests.exceptions.RequestException as e:
+                st.error(f"Fehler beim Herunterladen des Bildes. URL: {img_url}")
+                st.exception(e) # Zeigt die volle Fehlermeldung in der App an
+            except UnidentifiedImageError:
+                st.error(f"Fehler bei der Bilderkennung: Die Daten von der URL sind kein gültiges Bildformat.")
+                st.info(f"URL: {img_url}")
             except Exception as e:
-                st.warning(f"Fehler beim Laden des Bildes: {e}")
+                st.error(f"Ein unerwarteter Fehler ist bei der Bildverarbeitung aufgetreten.")
+                st.exception(e)
         else:
-            st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
+            st.warning("⚠️ Replicate hat keinen gültigen Bildlink zurückgegeben oder der Link ist leer.")
         return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
+        st.exception(e)
         return None
 
 # MAIN APP FLOW
 data = scrape_top_articles()
 
+# Initialisiere den Session State, um generierte Inhalte über App-Neuausführungen hinweg zu speichern
+if 'generated_content' not in st.session_state:
+    st.session_state.generated_content = {}
+
 if data:
     for idx, item in enumerate(data):
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.image(item["image_url"], caption="Originalbild", width=300)
-        with col2:
-            st.markdown(f"### {item['headline']}")
-            st.markdown(f"**{item['dachzeile']}**")
-            st.markdown(f"🔗 [Zum Artikel]({item['url']})")
+        st.markdown("---")
+        st.markdown(f"### {item['headline']}")
+        st.markdown(f"**{item['dachzeile']}**")
+        st.markdown(f"🔗 [Zum Artikel]({item['url']})")
 
-            if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
-                with st.spinner("Erzeuge Prompt und Bild..."):
-                    prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
-                    if prompt:
-                        st.markdown("**📝 Generierter Prompt:**")
-                        st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{prompt}</div>", unsafe_allow_html=True)
-                        image = generate_image(prompt)
-                        if image:
-                            st.image(image, caption="KI-generiertes Bild", width=300)
-                        else:
-                            st.error("❌ Bild konnte nicht generiert werden.")
-                    else:
-                        st.error("❌ Prompt konnte nicht erzeugt werden.")
+        # Button, um die Generierung zu starten
+        if st.button(f"✨ KI-Bild für diesen Artikel generieren", key=f"btn_generate_{idx}"):
+            # Setze den Zustand für diesen Artikel zurück und zeige den Spinner
+            st.session_state.generated_content[idx] = {"prompt": None, "image": None, "status": "running"}
+            with st.spinner("Analysiere Originalbild und erzeuge Prompt..."):
+                prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
+                st.session_state.generated_content[idx]["prompt"] = prompt
+            
+            if st.session_state.generated_content[idx]["prompt"]:
+                with st.spinner("Generiere KI-Bild... Dieser Vorgang kann einen Moment dauern."):
+                    image = generate_image(prompt)
+                    st.session_state.generated_content[idx]["image"] = image
+            st.session_state.generated_content[idx]["status"] = "done"
+            st.rerun() # Erzwinge eine sofortige Neuausführung, um den Spinner zu entfernen und Ergebnisse anzuzeigen
+
+        # Dauerhafte Anzeige der Ergebnisse aus dem Session State
+        if idx in st.session_state.generated_content and st.session_state.generated_content[idx].get("status") == "done":
+            content = st.session_state.generated_content[idx]
+            
+            st.markdown("**📝 Generierter Prompt:**")
+            if content["prompt"]:
+                st.info(content["prompt"])
+            else:
+                st.error("❌ Prompt konnte nicht erzeugt werden.")
+
+            st.markdown("**🖼️ Bildvergleich:**")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(item["image_url"], caption="Originalbild (ZDFheute)", use_column_width=True)
+            with col2:
+                if content["image"]:
+                    st.image(content["image"], caption="KI-generiertes Bild (Replicate)", use_column_width=True)
+                else:
+                    st.error("❌ Bild konnte nicht generiert werden.")
+
 else:
     st.warning("Keine Daten gefunden.")
