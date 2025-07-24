@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from io import BytesIO
 import os
 from dotenv import load_dotenv
@@ -95,7 +95,7 @@ def generate_prompt(headline, dachzeile, image_url):
         return None
 
 # Generate image with Replicate (ideogram-v3-turbo)
-def generate_image(prompt):
+def generate_image_url(prompt):
     try:
         os.environ["REPLICATE_API_TOKEN"] = replicate_token
         output = replicate.run(
@@ -108,17 +108,9 @@ def generate_image(prompt):
                 "magic_prompt_option": "Auto"
             }
         )
-
-        st.markdown("### 🧪 Raw Replicate Output:")
-        st.write(output)
-
-        # Wenn ein Link vorhanden ist, diesen direkt zurückgeben (nachdem Leerzeichen entfernt wurden)
-        if isinstance(output, list) and len(output) > 0 and output[0].strip().startswith("http"):
-            image_url = output[0].strip()
-            return image_url # Gibt den URL-String direkt zurück
-        else:
-            st.warning("⚠️ Replicate hat keinen Bildlink zurückgegeben oder der Link ist leer.")
-            return None
+        if isinstance(output, list) and len(output) > 0 and output[0].startswith("http"):
+            return output[0]
+        return None
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
         return None
@@ -136,24 +128,13 @@ if data:
         if f"generated_{idx}" not in st.session_state:
             st.session_state[f"generated_{idx}"] = {"prompt": None, "image_url": None}
 
-        if st.session_state[f"generated_{idx}"]["image_url"]:
-            col1, col2 = st.columns(2)
-            with col1:
-                st.image(item["image_url"], caption="Originalbild", width=400)
-            with col2:
-                st.markdown(f"**KI-generiertes Bild Link:**")
-                # Zeigt den Link als klickbaren Markdown-Link an
-                st.markdown(f"[{st.session_state[f'generated_{idx}']['image_url']}]({st.session_state[f'generated_{idx}']['image_url']})")
-                st.markdown("Klicken Sie auf den Link, um das KI-generierte Bild in einem neuen Tab zu öffnen.")
-        else:
-            st.image(item["image_url"], caption="Originalbild", width=400)
+        st.image(item["image_url"], caption="Originalbild", width=400)
 
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
-            with st.spinner("Erzeuge Prompt und Bild..."):
+            with st.spinner("Erzeuge Prompt und Bild-Link..."):
                 prompt = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                 if prompt:
-                    # image_url wird jetzt der URL-String sein
-                    image_url = generate_image(prompt)
+                    image_url = generate_image_url(prompt)
                     st.session_state[f"generated_{idx}"] = {"prompt": prompt, "image_url": image_url}
                 else:
                     st.error("❌ Prompt konnte nicht erzeugt werden.")
@@ -162,5 +143,11 @@ if data:
         if st.session_state[f"generated_{idx}"]["prompt"]:
             st.markdown("**📝 Generierter Prompt:**")
             st.markdown(f"<div style='word-wrap: break-word; white-space: pre-wrap;'>{st.session_state[f'generated_{idx}']['prompt']}</div>", unsafe_allow_html=True)
+
+        if st.session_state[f"generated_{idx}"]["image_url"]:
+            st.markdown("**🎨 KI-generiertes Bild:**")
+            image_url = st.session_state[f"generated_{idx}"]["image_url"]
+            st.markdown(f"[🔗 Bild öffnen]({image_url})")
+            st.image(image_url, width=400)
 else:
     st.warning("Keine Daten gefunden.")
