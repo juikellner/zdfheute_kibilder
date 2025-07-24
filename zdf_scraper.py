@@ -117,25 +117,18 @@ if data:
             st.markdown(f"**{item['dachzeile']}**")
             st.markdown(f"🔗 [Zum Artikel]({item['url']})")
 
-            prompt_key = f"prompt_{idx}"
-            image_key = f"image_{idx}"
-
             if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
                 with st.spinner("Erzeuge Prompt und Bild..."):
                     prompt = generate_prompt(item['headline'], item['dachzeile'])
-                    st.session_state[prompt_key] = prompt
                     if prompt:
+                        st.markdown("**📝 Generierter Prompt:**")
+                        st.code(prompt)
                         image_url = generate_image(prompt)
-                        st.session_state[image_key] = image_url
-
-            if prompt_key in st.session_state:
-                st.markdown("**📝 Generierter Prompt:**")
-                st.code(st.session_state[prompt_key])
-
-            if image_key in st.session_state:
-                if isinstance(st.session_state[image_key], str) and st.session_state[image_key].startswith("http"):
-                    st.image(st.session_state[image_key], caption="KI-generiertes Bild", use_container_width=True)
-                else:
-                    st.error("Kein gültiges Bild erzeugt.")
+                        if image_url:
+                            st.image(image_url, caption="KI-generiertes Bild", use_container_width=True)
+                        else:
+                            st.error("❌ Bild konnte nicht generiert werden.")
+                    else:
+                        st.error("❌ Prompt konnte nicht erzeugt werden.")
 else:
     st.warning("Keine Daten gefunden.")
