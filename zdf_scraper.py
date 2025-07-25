@@ -153,7 +153,7 @@ if data:
 
         if st.session_state[f"generated_{idx}"].get("image_description"):
             st.markdown("**🖼️ Bildbeschreibung:**")
-            st.markdown(f"<code style='font-size: 0.9rem; word-break: break-word; white-space: pre-wrap;'>{st.session_state[f'generated_{idx}']['image_description']}</code>", unsafe_allow_html=True)
+            st.markdown(f"<code style='font-size: 1.0rem; word-break: break-word; white-space: pre-wrap;'>{st.session_state[f'generated_{idx}']['image_description']}</code>", unsafe_allow_html=True)
 
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
             with st.spinner("🔍 Erzeuge Prompt..."):
