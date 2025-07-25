@@ -19,7 +19,7 @@ st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Teaser")
 
 # Hinweistext (klein und responsiv)
-st.markdown("<p style='font-size: 1.8rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o/4 zur Bildbeschreibung und Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> auf replicate.com verwendet.</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o/4 zur Bildbeschreibung und Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> auf replicate.com verwendet.</p>", unsafe_allow_html=True)
 
 # Extrahiere Kontext aus Bild-URL (z. B. Namen, Orte etc.)
 def extract_context_from_url(url):
