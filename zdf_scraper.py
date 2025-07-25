@@ -7,7 +7,6 @@ import os
 from dotenv import load_dotenv
 import openai
 import replicate
-import re
 
 # Load API keys from .env
 load_dotenv()
@@ -19,14 +18,7 @@ st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Teaser")
 
 # Hinweistext (klein und responsiv)
-st.markdown("<p style='font-size: 0.8rem; line-height: 1.4;'>🔍 Diese Anwendung nutzt GPT-4o zur Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile, der Bildbeschreibung und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von Replicate verwendet. Das erzeugte Bild enthält keinen Text.</p>", unsafe_allow_html=True)
-
-# Extrahiere Kontext aus Bild-URL (z. B. Namen, Orte etc.)
-def extract_context_from_url(url):
-    filename = url.split("/")[-1].split("~")[0]
-    parts = re.split("[-_]+", filename)
-    keywords = [part for part in parts if part.isalpha() and len(part) > 2]
-    return ", ".join(keywords)
+st.markdown("<p style='font-size: 0.8rem; line-height: 1.4;'>🔍 Diese Anwendung nutzt GPT-4o zur Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile und der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von Replicate verwendet. Das erzeugte Bild enthält keinen Text.</p>", unsafe_allow_html=True)
 
 # Scrape top news articles from ZDFheute with best image resolution
 def scrape_top_articles():
@@ -93,13 +85,11 @@ def generate_prompt(headline, dachzeile, image_url):
         )
         image_description = vision_response.choices[0].message.content.strip().replace("\n", " ")
 
-        context_from_url = extract_context_from_url(image_url)
-
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI."},
-                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nBild-URL-Kontext: '{context_from_url}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
+                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nBild-URL: {image_url}\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
             ]
         )
         return response.choices[0].message.content.strip().replace("\n", " "), image_description
