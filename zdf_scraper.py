@@ -109,14 +109,9 @@ def generate_prompt(headline, dachzeile, image_url):
         vision_response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": f"Du bist ein visuelles Analysemodell. Beschreibe stichpunktartig den Inhalt dieses journalistischen Nachrichtenbildes, das zu folgendem Kontext gehört: {context_from_url}. Falls Gesichter oder Personen nicht erkennbar sind, gib den vermutlichen Inhalt anhand des Kontexts an. Formuliere neutral und informativ."},
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image_url", "image_url": {"url": image_url}},
-                        {"type": "text", "text": "Bitte analysiere das Bild unter Einbeziehung des Kontexts."}
-                    ]
-                }
+                {"role": "system", "content": f"Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Binde diesen Kontext in die Beschreibung ein."},
+                {"role": "user", "content": "Analysiere das folgende Bild und beschreibe den visuellen Inhalt unter Einbeziehung des Kontexts."},
+                {"type": "image_url", "image_url": {"url": image_url}}
             ],
             max_tokens=1000
         )
@@ -134,7 +129,7 @@ def generate_prompt(headline, dachzeile, image_url):
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
         return None, None
 
-# Generate image with Replicate (google/imagen-4-fast)
+# Generate image with Replicate
 
 def generate_image_url(prompt):
     try:
