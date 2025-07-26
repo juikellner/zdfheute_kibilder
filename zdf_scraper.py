@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from io import BytesIO
 import os
 from dotenv import load_dotenv
@@ -19,16 +19,16 @@ st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Teaser")
 
 # Hinweistext (klein und responsiv)
-st.markdown("<p style='font-size: 0.8rem; line-height: 1.4;'>🔍 Diese Anwendung nutzt GPT-4o zur Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile, der Bildbeschreibung und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von Replicate verwendet. Das erzeugte Bild enthält keinen Text.</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o/4 zur Bildbeschreibung und Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> auf replicate.com verwendet.</p>", unsafe_allow_html=True)
 
-# Kontext aus Bild-URL extrahieren
+# Extrahiere Kontext aus Bild-URL (z. B. Namen, Orte etc.)
 def extract_context_from_url(url):
     filename = url.split("/")[-1].split("~")[0]
     parts = re.split("[-_]+", filename)
     keywords = [part for part in parts if part.isalpha() and len(part) > 2]
     return ", ".join(keywords)
 
-# Scrape top news articles from ZDFheute with best image resolution (min. 276x155)
+# Scrape top news articles from ZDFheute with best image resolution
 def scrape_top_articles():
     url = "https://www.zdfheute.de/"
     headers = {
@@ -46,22 +46,8 @@ def scrape_top_articles():
                 continue
             srcset = img.get("srcset", "")
             images = [s.strip().split(" ")[0] for s in srcset.split(",") if s.strip() and "https://" in s]
-
-            filtered_images = []
-            for img_url in images:
-                dims_match = re.search(r"~(\d+)x(\d+)", img_url)
-                if dims_match:
-                    try:
-                        width, height = map(int, dims_match.groups())
-                        if width >= 276 and height >= 155:
-                            filtered_images.append((width, img_url))
-                    except ValueError:
-                        continue
-
-            if not filtered_images:
-                continue
-
-            img_url = sorted(filtered_images, key=lambda x: x[0], reverse=True)[0][1]
+            images = sorted(images, key=lambda x: int(x.split("~")[-1].split("x")[0]) if "~" in x else 0, reverse=True)
+            img_url = images[0] if images else img.get("src")
 
             parent = pic.find_parent("div")
             while parent and not parent.find("a"):
@@ -77,24 +63,73 @@ def scrape_top_articles():
                 dachzeile = ""
                 article_url = ""
 
-            context = extract_context_from_url(img_url)
-
             results.append({
                 "image_url": img_url,
                 "headline": title,
                 "dachzeile": dachzeile,
-                "url": article_url,
-                "context": context
+                "url": article_url
             })
         return results
     except Exception as e:
         st.error(f"Fehler beim Scraping: {e}")
         return []
 
-# --- Hauptanwendung ---
+# Generate image prompt using OpenAI
+def generate_prompt(headline, dachzeile, image_url):
+    try:
+        vision_response = openai.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": image_url}},
+                        {"type": "text", "text": f"Bitte analysiere das Bild."}
+                    ]
+                }
+            ],
+            max_tokens=1000
+        )
+        image_description = vision_response.choices[0].message.content.strip().replace("\n", " ")
+
+        context_from_url = extract_context_from_url(image_url)
+
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich."},
+                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nBild-URL-Kontext: '{context_from_url}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
+            ]
+        )
+        return response.choices[0].message.content.strip().replace("\n", " "), image_description
+    except Exception as e:
+        st.error(f"Fehler bei Prompt-Erstellung: {e}")
+        return None, None
+
+# Generate image with Replicate (google/imagen-4-fast)
+def generate_image_url(prompt):
+    try:
+        os.environ["REPLICATE_API_TOKEN"] = replicate_token
+        output = replicate.run(
+            "google/imagen-4-fast",
+            input={
+                "prompt": prompt,
+                "aspect_ratio": "4:3",
+                "output_format": "jpg",
+                "safety_filter_level": "block_only_high"
+            }
+        )
+
+        result = output[0] if isinstance(output, list) and len(output) > 0 else output
+        image_url = str(result)
+        return image_url
+    except Exception as e:
+        st.error(f"Fehler bei Bildgenerierung: {e}")
+        return None
+
+# MAIN APP FLOW
 data = scrape_top_articles()
-if 'generated_content' not in st.session_state:
-    st.session_state.generated_content = {}
 
 if data:
     for idx, item in enumerate(data):
@@ -103,66 +138,52 @@ if data:
         st.markdown(f"**{item['dachzeile']}**")
         st.markdown(f"🔗 [Zum Artikel]({item['url']})")
 
-        st.image(item["image_url"], caption="Originalbild (ZDFheute)", width=800)
+        if f"generated_{idx}" not in st.session_state:
+            st.session_state[f"generated_{idx}"] = {"prompt": None, "image_url": None, "image_description": None}
 
-        with st.spinner("Analysiere Originalbild..."):
-            try:
-                vision_response = openai.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "system", "content": "Du bist ein kreativer Prompt-Designer. Beschreibe das Bild stichpunktartig."},
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "image_url", "image_url": {"url": item["image_url"]}},
-                                {"type": "text", "text": "Bitte analysiere dieses Bild."}
-                            ]
-                        }
-                    ],
-                    max_tokens=1000
-                )
-                image_description = vision_response.choices[0].message.content.strip()
-            except Exception as e:
-                st.warning(f"Bildbeschreibung konnte nicht erstellt werden: {e}")
-                image_description = ""
+        st.image(item["image_url"], caption="Originalbild", width=800)
 
-        if image_description:
-            st.markdown("**📝 Bildbeschreibung:**")
-            st.markdown(f"<code style='font-size: 1rem; white-space: normal;'>{image_description}</code>", unsafe_allow_html=True)
+        st.markdown("**🌐 Bildquelle (URL):**")
+        st.markdown(f"<code style='font-size: 0.9rem; word-break: break-word; white-space: pre-wrap;'>{item['image_url']}</code>", unsafe_allow_html=True)
 
-        if st.button(f"✨ Prompt & Bild generieren ...", key=f"btn_generate_{idx}"):
-            with st.spinner("Erstelle Prompt..."):
-                try:
-                    prompt_response = openai.chat.completions.create(
-                        model="gpt-4",
-                        messages=[
-                            {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI."},
-                            {"role": "user", "content": f"Erstelle einen filmisch-realistischen Prompt auf Englisch für folgende ZDF-Schlagzeile: '{item['headline']}'\nDachzeile: '{item['dachzeile']}'\nKontext: '{item['context']}'\nBildbeschreibung: '{image_description}'. Der Prompt soll für das Modell 'google/imagen-4-fast' geeignet sein."}
-                        ]
-                    )
-                    prompt = prompt_response.choices[0].message.content.strip()
-                    st.markdown("**🎯 Generierter Prompt:**")
-                    st.markdown(f"<code style='font-size: 1rem; white-space: normal;'>{prompt}</code>", unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"Fehler bei Prompt-Erstellung: {e}")
-                    prompt = None
+        if not st.session_state[f"generated_{idx}"]["image_description"]:
+            with st.spinner("📷 Analysiere Bild..."):
+                _, image_description = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
+                st.session_state[f"generated_{idx}"]["image_description"] = image_description
+
+        if st.session_state[f"generated_{idx}"].get("image_description"):
+            st.markdown("**🖼️ Bildbeschreibung:**")
+            st.markdown(f"<code style='font-size: 1.0rem; word-break: break-word; white-space: pre-wrap;'>{st.session_state[f'generated_{idx}']['image_description']}</code>", unsafe_allow_html=True)
+
+        if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
+            with st.spinner("🔍 Erzeuge Prompt..."):
+                prompt, _ = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
+                st.session_state[f"generated_{idx}"]["prompt"] = prompt
 
             if prompt:
-                with st.spinner("Erzeuge KI-Bild..."):
-                    try:
-                        os.environ["REPLICATE_API_TOKEN"] = replicate_token
-                        output = replicate.run(
-                            "google/imagen-4-fast",
-                            input={
-                                "prompt": prompt,
-                                "aspect_ratio": "4:3",
-                                "output_format": "jpg",
-                                "safety_filter_level": "block_only_high"
-                            }
-                        )
-                        img_url = str(output[0]) if isinstance(output, list) else str(output)
-                        st.image(img_url, caption="KI-generiertes Bild (Replicate)", width=800)
-                    except Exception as e:
-                        st.error(f"Fehler bei der Bildgenerierung: {e}")
+                st.markdown("**📝 Generierter Prompt:**")
+                st.markdown(f"<code style='font-size: 1.0rem; word-break: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
+
+                with st.spinner("🎨 Erzeuge KI-Bild..."):
+                    image_url = generate_image_url(prompt)
+                    st.session_state[f"generated_{idx}"]["image_url"] = image_url
+            st.rerun()
+
+        generated = st.session_state.get(f"generated_{idx}", {})
+        prompt = generated.get("prompt")
+        image_url = generated.get("image_url")
+
+        if prompt:
+            st.markdown("**📝 Generierter Prompt:**")
+            st.markdown(f"<code style='font-size: 1.0rem; word-break: break-word; white-space: pre-wrap;'>{prompt}</code>", unsafe_allow_html=True)
+
+        if image_url:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(item["image_url"], caption="Originalbild", width=800)
+            with col2:
+                st.image(image_url, caption="KI-generiertes Bild", width=800)
+        elif prompt:
+            st.info("⚠️ Kein KI-Bildlink von Replicate erhalten.")
 else:
     st.warning("Keine Daten gefunden.")
