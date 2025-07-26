@@ -21,12 +21,23 @@ st.title("📰 ZDFheute KI-Teaser")
 # Hinweistext (klein und responsiv)
 st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o/4 zur Bildbeschreibung und Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> auf replicate.com verwendet.</p>", unsafe_allow_html=True)
 
-# Extrahiere Kontext aus Bild-URL (z. B. Namen, Orte etc.)
+# Extrahiere Kontext aus Bild-URL (z. B. Namen, Orte etc.) – GPT-gestützt
 def extract_context_from_url(url):
     filename = url.split("/")[-1].split("~")[0]
-    parts = re.split("[-_]+", filename)
-    keywords = [part for part in parts if part.isalpha() and len(part) > 2]
-    return ", ".join(keywords)
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Du extrahierst aus einem Bild-Dateinamen relevante Begriffe wie Namen, Orte, Ereignisse oder Schlagwörter, die für die Bildbeschreibung und KI-generierte Bildprompts hilfreich sein können."},
+                {"role": "user", "content": f"Extrahiere sinnvolle Stichwörter aus folgendem Bild-Dateinamen: {filename}"}
+            ],
+            max_tokens=100
+        )
+        keywords = response.choices[0].message.content.strip()
+        return keywords
+    except Exception as e:
+        st.warning(f"GPT-Kontextanalyse fehlgeschlagen: {e}")
+        return ""
 
 # Scrape top news articles from ZDFheute with best image resolution
 def scrape_top_articles():
@@ -46,7 +57,7 @@ def scrape_top_articles():
                 continue
             srcset = img.get("srcset", "")
             images = [s.strip().split(" ")[0] for s in srcset.split(",") if s.strip() and "https://" in s]
-            
+
             filtered_images = []
             for img_url in images:
                 dims_match = re.search(r"~(\d+)x(\d+)", img_url)
