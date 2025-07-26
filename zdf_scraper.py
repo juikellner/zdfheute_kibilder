@@ -46,8 +46,22 @@ def scrape_top_articles():
                 continue
             srcset = img.get("srcset", "")
             images = [s.strip().split(" ")[0] for s in srcset.split(",") if s.strip() and "https://" in s]
-            images = sorted(images, key=lambda x: int(x.split("~")[-1].split("x")[0]) if "~" in x else 0, reverse=True)
-            img_url = images[0] if images else img.get("src")
+            
+            filtered_images = []
+            for img_url in images:
+                dims_match = re.search(r"~(\d+)x(\d+)", img_url)
+                if dims_match:
+                    try:
+                        width, height = map(int, dims_match.groups())
+                        if width >= 276 and height >= 155:
+                            filtered_images.append((width, img_url))
+                    except ValueError:
+                        continue
+
+            if not filtered_images:
+                continue
+
+            img_url = sorted(filtered_images, key=lambda x: x[0], reverse=True)[0][1]
 
             parent = pic.find_parent("div")
             while parent and not parent.find("a"):
