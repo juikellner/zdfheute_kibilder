@@ -23,18 +23,16 @@ st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendun
 
 # GPT-gestützte Extraktion von Kontext aus Bild-URL (z. B. Namen, Orte etc.)
 def extract_context_from_url(url):
-    filename = url.split("/")[-1]
     try:
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Du bist ein KI-System, das aus Dateinamen von Nachrichtenbildern den möglichen Kontext erschließt: Personennamen, Orte, Ereignisse oder andere relevante Stichwörter, wie sie für Nachrichtenartikel typisch sind."},
-                {"role": "user", "content": f"Analysiere folgenden Bild-Dateinamen und extrahiere sinnvolle kontextuelle Informationen: {filename}. Gib die wichtigsten Begriffe oder Namen in einer durch Kommata getrennten Liste zurück."}
+                {"role": "system", "content": "Du bist ein KI-System, das aus einer Bild-URL relevante kontextuelle Informationen für journalistische Zwecke extrahiert. Ziehe aus der URL insbesondere Personennamen, Länder, Orte oder Ereignisse. Gib die Begriffe in einer durch Kommata getrennten Liste zurück."},
+                {"role": "user", "content": f"Extrahiere sinnvolle Stichwörter aus dieser Bild-URL: {url}"}
             ],
             max_tokens=100
         )
-        keywords = response.choices[0].message.content.strip()
-        return keywords
+        return response.choices[0].message.content.strip()
     except Exception as e:
         st.warning(f"GPT-Kontextanalyse fehlgeschlagen: {e}")
         return ""
@@ -132,9 +130,6 @@ def generate_prompt(headline, dachzeile, image_url):
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
         return None, None
 
-# ... (Rest bleibt unverändert)
-
-
 # Generate image with Replicate (google/imagen-4-fast)
 def generate_image_url(prompt):
     try:
@@ -148,10 +143,8 @@ def generate_image_url(prompt):
                 "safety_filter_level": "block_only_high"
             }
         )
-
         result = output[0] if isinstance(output, list) and len(output) > 0 else output
-        image_url = str(result)
-        return image_url
+        return str(result)
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
         return None
