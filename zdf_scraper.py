@@ -21,7 +21,8 @@ st.title("📰 ZDFheute KI-Teaser")
 # Hinweistext (klein und responsiv)
 st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o/4 zur Bildbeschreibung und Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> auf replicate.com verwendet.</p>", unsafe_allow_html=True)
 
-# GPT-gestützte Extraktion von Kontext aus Bild-URL (z. B. Namen, Orte etc.)
+# GPT-gestützte Extraktion von Kontext aus Bild-URL
+
 def extract_context_from_url(url):
     try:
         filename = url.split("/")[-1].split("~")[0]
@@ -39,6 +40,7 @@ def extract_context_from_url(url):
         return ""
 
 # Scrape top news articles from ZDFheute with best image resolution
+
 def scrape_top_articles():
     url = "https://www.zdfheute.de/"
     headers = {
@@ -99,6 +101,7 @@ def scrape_top_articles():
         return []
 
 # Generate image prompt using OpenAI
+
 def generate_prompt(headline, dachzeile, image_url):
     try:
         context_from_url = extract_context_from_url(image_url)
@@ -106,7 +109,7 @@ def generate_prompt(headline, dachzeile, image_url):
         vision_response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt. Binde folgenden Kontext in die Beschreibung mit ein: " + context_from_url},
+                {"role": "system", "content": f"Du bist ein visuelles Analysemodell. Beschreibe stichpunktartig den Inhalt dieses journalistischen Nachrichtenbildes, das zu folgendem Kontext gehört: {context_from_url}. Falls Gesichter oder Personen nicht erkennbar sind, gib den vermutlichen Inhalt anhand des Kontexts an. Formuliere neutral und informativ."},
                 {
                     "role": "user",
                     "content": [
@@ -132,6 +135,7 @@ def generate_prompt(headline, dachzeile, image_url):
         return None, None
 
 # Generate image with Replicate (google/imagen-4-fast)
+
 def generate_image_url(prompt):
     try:
         os.environ["REPLICATE_API_TOKEN"] = replicate_token
@@ -151,6 +155,7 @@ def generate_image_url(prompt):
         return None
 
 # MAIN APP FLOW
+
 data = scrape_top_articles()
 
 if data:
