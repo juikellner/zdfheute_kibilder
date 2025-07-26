@@ -152,7 +152,15 @@ if data:
                 st.image(item["image_url"], caption="Originalbild", use_column_width=True)
             with col2:
                 if imagen_url:
-                    st.image(imagen_url, caption="KI-Bild: google/imagen-4-fast", width=350)
+                    try:
+                        response = requests.get(imagen_url)
+                        if response.status_code == 200:
+                            img = Image.open(BytesIO(response.content))
+                            st.image(img, caption="KI-Bild: google/imagen-4-fast", width=350)
+                        else:
+                            st.warning("⚠️ Imagen-Bild konnte nicht geladen werden.")
+                    except Exception as e:
+                        st.warning(f"⚠️ Fehler beim Laden des Imagen-Bildes: {e}")
                 if luma_url:
                     try:
                         response = requests.get(luma_url)
