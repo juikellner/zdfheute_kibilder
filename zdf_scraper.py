@@ -24,11 +24,12 @@ st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendun
 # GPT-gestützte Extraktion von Kontext aus Bild-URL (z. B. Namen, Orte etc.)
 def extract_context_from_url(url):
     try:
+        filename = url.split("/")[-1].split("~")[0]
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Du bist ein KI-System, das aus einer Bild-URL relevante kontextuelle Informationen für journalistische Zwecke extrahiert. Ziehe aus der URL insbesondere Personennamen, Länder, Orte oder Ereignisse. Gib die Begriffe in einer durch Kommata getrennten Liste zurück."},
-                {"role": "user", "content": f"Extrahiere sinnvolle Stichwörter aus dieser Bild-URL: {url}"}
+                {"role": "system", "content": "Du bist ein Nachrichtensystem. Deine Aufgabe ist es, aus einem Bild-Dateinamen (wie in einer URL) sinnvolle kontextuelle Informationen wie Personennamen, Orte, Länder oder Ereignisse zu extrahieren und in einen sinnvollen Nachrichtenzusammenhang zu setzen. Antworte mit einem vollständigen, aber kurzen Satz im journalistischen Stil."},
+                {"role": "user", "content": f"Dateiname aus URL: {filename}"}
             ],
             max_tokens=100
         )
@@ -100,15 +101,17 @@ def scrape_top_articles():
 # Generate image prompt using OpenAI
 def generate_prompt(headline, dachzeile, image_url):
     try:
+        context_from_url = extract_context_from_url(image_url)
+
         vision_response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt. Binde folgenden Kontext in die Beschreibung mit ein: " + context_from_url},
                 {
                     "role": "user",
                     "content": [
                         {"type": "image_url", "image_url": {"url": image_url}},
-                        {"type": "text", "text": "Bitte analysiere das Bild."}
+                        {"type": "text", "text": "Bitte analysiere das Bild unter Einbeziehung des Kontexts."}
                     ]
                 }
             ],
@@ -116,13 +119,11 @@ def generate_prompt(headline, dachzeile, image_url):
         )
         image_description = vision_response.choices[0].message.content.strip().replace("\n", " ")
 
-        context_from_url = extract_context_from_url(image_url)
-
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich."},
-                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext aus Bild-URL: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
+                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
             ]
         )
         return response.choices[0].message.content.strip().replace("\n", " "), image_description
