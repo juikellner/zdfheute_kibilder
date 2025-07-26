@@ -154,6 +154,16 @@ if data:
                 if imagen_url:
                     st.image(imagen_url, caption="KI-Bild: google/imagen-4-fast", width=350)
                 if luma_url:
-                    st.image(luma_url, caption="KI-Bild: luma/photon-flash", width=350)
+                    try:
+                        response = requests.get(luma_url)
+                        if response.status_code == 200:
+                            img = Image.open(BytesIO(response.content))
+                            st.image(img, caption="KI-Bild: luma/photon-flash", width=350)
+                        else:
+                            st.warning("⚠️ Luma-Bild konnte nicht geladen werden.")
+                    except Exception as e:
+                        st.warning(f"⚠️ Fehler beim Laden des Luma-Bildes: {e}")
+                else:
+                    st.warning("⚠️ Kein gültiges Bild von luma/photon-flash empfangen.")
 else:
     st.warning("Keine Daten gefunden.")
