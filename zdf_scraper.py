@@ -21,15 +21,15 @@ st.title("📰 ZDFheute KI-Teaser")
 # Hinweistext (klein und responsiv)
 st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o/4 zur Bildbeschreibung und Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> auf replicate.com verwendet.</p>", unsafe_allow_html=True)
 
-# Extrahiere Kontext aus Bild-URL (z. B. Namen, Orte etc.) – GPT-gestützt
+# GPT-gestützte Extraktion von Kontext aus Bild-URL (z. B. Namen, Orte etc.)
 def extract_context_from_url(url):
-    filename = url.split("/")[-1].split("~")[0]
+    filename = url.split("/")[-1]
     try:
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Du extrahierst aus einem Bild-Dateinamen relevante Begriffe wie Namen, Orte, Ereignisse oder Schlagwörter, die für die Bildbeschreibung und KI-generierte Bildprompts hilfreich sein können."},
-                {"role": "user", "content": f"Extrahiere sinnvolle Stichwörter aus folgendem Bild-Dateinamen: {filename}"}
+                {"role": "system", "content": "Du bist ein KI-System, das aus Dateinamen von Nachrichtenbildern den möglichen Kontext erschließt: Personennamen, Orte, Ereignisse oder andere relevante Stichwörter, wie sie für Nachrichtenartikel typisch sind."},
+                {"role": "user", "content": f"Analysiere folgenden Bild-Dateinamen und extrahiere sinnvolle kontextuelle Informationen: {filename}. Gib die wichtigsten Begriffe oder Namen in einer durch Kommata getrennten Liste zurück."}
             ],
             max_tokens=100
         )
@@ -110,7 +110,7 @@ def generate_prompt(headline, dachzeile, image_url):
                     "role": "user",
                     "content": [
                         {"type": "image_url", "image_url": {"url": image_url}},
-                        {"type": "text", "text": f"Bitte analysiere das Bild."}
+                        {"type": "text", "text": "Bitte analysiere das Bild."}
                     ]
                 }
             ],
@@ -124,13 +124,16 @@ def generate_prompt(headline, dachzeile, image_url):
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich."},
-                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nBild-URL-Kontext: '{context_from_url}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
+                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext aus Bild-URL: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
             ]
         )
         return response.choices[0].message.content.strip().replace("\n", " "), image_description
     except Exception as e:
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
         return None, None
+
+# ... (Rest bleibt unverändert)
+
 
 # Generate image with Replicate (google/imagen-4-fast)
 def generate_image_url(prompt):
