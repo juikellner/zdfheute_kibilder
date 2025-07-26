@@ -47,34 +47,45 @@ def scrape_top_articles():
     try:
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, "html.parser")
+        teasers = soup.find_all("picture", class_="slrzex8")
 
-        h2_blocks = soup.find_all("h2", class_="hvzzigm")
         results = []
+        for pic in teasers:
+            # ⛔️ Skip teaser if it contains "mit Video"-block nearby
+            video_marker = pic.find_next("div", class_="hiqr0m7")
+            if video_marker:
+                continue
 
-        for h2 in h2_blocks[:3]:
-            spans = h2.find_all("span")
-            if len(spans) >= 3:
-                dachzeile = spans[0].get_text(strip=True)
-                headline = spans[2].get_text(strip=True)
-                a_tag = spans[2].find("a")
-                url_suffix = a_tag["href"] if a_tag else ""
-                full_url = "https://www.zdfheute.de" + url_suffix
+            img = pic.find("img")
+            if not img:
+                continue
+            srcset = img.get("srcset", "")
+            images = [s.strip().split(" ")[0] for s in srcset.split(",") if "https://" in s]
+            filtered = [s for s in images if re.search(r"~(\d+)x(\d+)", s)]
+            img_url = filtered[-1] if filtered else images[-1]
 
-                picture = h2.find_previous("picture")
-                img_url = ""
-                if picture:
-                    img = picture.find("img")
-                    if img and img.get("srcset"):
-                        images = [s.strip().split(" ")[0] for s in img["srcset"].split(",") if "https://" in s]
-                        filtered = [s for s in images if re.search(r"~(\\d+)x(\\d+)", s)]
-                        img_url = filtered[-1] if filtered else images[-1]
+            parent = pic.find_parent("div")
+            while parent and not parent.find("a"):
+                parent = parent.find_parent("div")
 
-                results.append({
-                    "headline": headline,
-                    "dachzeile": dachzeile,
-                    "url": full_url,
-                    "image_url": img_url
-                })
+            if parent:
+                a_tag = parent.find("a")
+                title = a_tag.get_text(strip=True)
+                article_url = "https://www.zdfheute.de" + a_tag["href"]
+                dachzeile_tag = parent.find("span")
+                dachzeile = dachzeile_tag.get_text(strip=True) if dachzeile_tag else ""
+            else:
+                title, dachzeile, article_url = "", "", ""
+
+            results.append({
+                "image_url": img_url,
+                "headline": title,
+                "dachzeile": dachzeile,
+                "url": article_url
+            })
+
+            if len(results) == 3:
+                break
 
         return results
 
