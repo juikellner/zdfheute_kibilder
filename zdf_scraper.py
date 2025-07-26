@@ -43,31 +43,41 @@ def extract_context_from_url(url):
 
 def scrape_top_articles():
     url = "https://www.zdfheute.de/"
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+    }
     try:
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, "html.parser")
-        teasers = soup.find_all("picture", class_="slrzex8")
 
+        teasers = soup.find_all("picture", class_="slrzex8")[:3]
         results = []
         for pic in teasers:
-            # ⛔️ Skip teaser if it contains "mit Video"-block nearby
-            video_marker = pic.find_next("div", class_="hiqr0m7")
-            if video_marker:
-                continue
-
             img = pic.find("img")
             if not img:
                 continue
             srcset = img.get("srcset", "")
-            images = [s.strip().split(" ")[0] for s in srcset.split(",") if "https://" in s]
-            filtered = [s for s in images if re.search(r"~(\d+)x(\d+)", s)]
-            img_url = filtered[-1] if filtered else images[-1]
+            images = [s.strip().split(" ")[0] for s in srcset.split(",") if s.strip() and "https://" in s]
+
+            filtered_images = []
+            for img_url in images:
+                dims_match = re.search(r"~(\d+)x(\d+)", img_url)
+                if dims_match:
+                    try:
+                        width, height = map(int, dims_match.groups())
+                        if width >= 276 and height >= 155:
+                            filtered_images.append((width, img_url))
+                    except ValueError:
+                        continue
+
+            if not filtered_images:
+                continue
+
+            img_url = sorted(filtered_images, key=lambda x: x[0], reverse=True)[0][1]
 
             parent = pic.find_parent("div")
             while parent and not parent.find("a"):
                 parent = parent.find_parent("div")
-
             if parent:
                 a_tag = parent.find("a")
                 title = a_tag.get_text(strip=True)
@@ -75,7 +85,9 @@ def scrape_top_articles():
                 dachzeile_tag = parent.find("span")
                 dachzeile = dachzeile_tag.get_text(strip=True) if dachzeile_tag else ""
             else:
-                title, dachzeile, article_url = "", "", ""
+                title = "Kein Titel gefunden"
+                dachzeile = ""
+                article_url = ""
 
             results.append({
                 "image_url": img_url,
@@ -83,12 +95,7 @@ def scrape_top_articles():
                 "dachzeile": dachzeile,
                 "url": article_url
             })
-
-            if len(results) == 3:
-                break
-
         return results
-
     except Exception as e:
         st.error(f"Fehler beim Scraping: {e}")
         return []
