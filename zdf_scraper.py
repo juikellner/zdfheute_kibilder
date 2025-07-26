@@ -19,7 +19,7 @@ st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Teaser")
 
 # Hinweistext (klein und responsiv)
-st.markdown("<p style='font-size: 0.8rem; line-height: 1.4;'>🔍 Diese Anwendung nutzt GPT-4o zur Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile, der Bildbeschreibung und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> von Replicate verwendet. Das erzeugte Bild enthält keinen Text.</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o/4 zur Bildbeschreibung und Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> auf replicate.com verwendet.</p>", unsafe_allow_html=True)
 
 # Extrahiere Kontext aus Bild-URL (z. B. Namen, Orte etc.)
 def extract_context_from_url(url):
@@ -28,7 +28,7 @@ def extract_context_from_url(url):
     keywords = [part for part in parts if part.isalpha() and len(part) > 2]
     return ", ".join(keywords)
 
-# Scrape top news articles from ZDFheute with best image resolution (min. 400x200)
+# Scrape top news articles from ZDFheute with best image resolution
 def scrape_top_articles():
     url = "https://www.zdfheute.de/"
     headers = {
@@ -48,14 +48,6 @@ def scrape_top_articles():
             images = [s.strip().split(" ")[0] for s in srcset.split(",") if s.strip() and "https://" in s]
             images = sorted(images, key=lambda x: int(x.split("~")[-1].split("x")[0]) if "~" in x else 0, reverse=True)
             img_url = images[0] if images else img.get("src")
-
-            # Check dimensions in URL (e.g. "276x155") and skip if too small
-            if "~" in img_url:
-                dims = img_url.split("~")[-1].split("x")
-                if len(dims) == 2:
-                    width, height = map(int, dims)
-                    if width < 400 or height < 200:
-                        continue
 
             parent = pic.find_parent("div")
             while parent and not parent.find("a"):
@@ -88,7 +80,7 @@ def generate_prompt(headline, dachzeile, image_url):
         vision_response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich. Beschreibe den visuellen Inhalt dieses Bildes in stichpunktartiger Form für einen Prompt."},
                 {
                     "role": "user",
                     "content": [
@@ -106,8 +98,8 @@ def generate_prompt(headline, dachzeile, image_url):
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI."},
-                {"role": "user", "content": f"Erstelle einen filmisch-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nBild-URL-Kontext: '{context_from_url}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich."},
+                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nBild-URL-Kontext: '{context_from_url}'\nNutze außerdem diese Bildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
             ]
         )
         return response.choices[0].message.content.strip().replace("\n", " "), image_description
