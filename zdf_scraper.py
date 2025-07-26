@@ -14,14 +14,11 @@ load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 replicate_token = os.getenv("REPLICATE_API_TOKEN")
 
-# Streamlit app title
 st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Teaser")
 
-# Hinweistext (klein und responsiv)
 st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt GPT-4o/4 zur Bildbeschreibung und Prompt-Erstellung basierend auf dem Bildinhalt, der Schlagzeile, der Dachzeile und analysierten Informationen aus der Bild-URL eines Artikels. Für die Bildgenerierung wird das Modell <code>google/imagen-4-fast</code> sowie <code>luma/photon-flash</code> auf replicate.com verwendet.</p>", unsafe_allow_html=True)
 
-# GPT-gestützte Extraktion von Kontext aus Bild-URL
 def extract_context_from_url(url):
     try:
         filename = url.split("/")[-1].split("~")[0]
@@ -38,7 +35,6 @@ def extract_context_from_url(url):
         st.warning(f"GPT-Kontextanalyse fehlgeschlagen: {e}")
         return ""
 
-# Scrape top news articles from ZDFheute
 def scrape_top_articles():
     url = "https://www.zdfheute.de/"
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -72,7 +68,6 @@ def scrape_top_articles():
         st.error(f"Fehler beim Scraping: {e}")
         return []
 
-# Prompt + Beschreibung generieren
 def generate_prompt(headline, dachzeile, image_url):
     try:
         context = extract_context_from_url(image_url)
@@ -98,20 +93,19 @@ def generate_prompt(headline, dachzeile, image_url):
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
         return None, None
 
-# Generiere beide Bilder mit Replicate
 def generate_image_url(prompt):
     try:
         os.environ["REPLICATE_API_TOKEN"] = replicate_token
         imagen_output = replicate.run("google/imagen-4-fast", {"prompt": prompt, "aspect_ratio": "4:3", "output_format": "jpg", "safety_filter_level": "block_only_high"})
         imagen_result = imagen_output[0] if isinstance(imagen_output, list) else imagen_output
         luma_output = replicate.run("luma/photon-flash", {"prompt": prompt, "aspect_ratio": "16:9", "image_reference_weight": 0.85, "style_reference_weight": 0.85})
-        luma_result = luma_output.url() if hasattr(luma_output, 'url') else luma_output[0] if isinstance(luma_output, list) else luma_output
+        luma_result = luma_output.get("image") if isinstance(luma_output, dict) else luma_output[0] if isinstance(luma_output, list) else None
         return str(imagen_result), str(luma_result)
     except Exception as e:
         st.error(f"Fehler bei Bildgenerierung: {e}")
         return None, None
 
-# App Start
+# --- Hauptlogik ---
 data = scrape_top_articles()
 if data:
     for idx, item in enumerate(data):
@@ -119,21 +113,27 @@ if data:
         st.markdown(f"### {item['headline']}")
         st.markdown(f"**{item['dachzeile']}**")
         st.markdown(f"🔗 [Zum Artikel]({item['url']})")
+
         if f"generated_{idx}" not in st.session_state:
             st.session_state[f"generated_{idx}"] = {"prompt": None, "imagen_url": None, "luma_url": None, "image_description": None}
+
         st.markdown("**🌐 Bildquelle (URL):**")
         st.markdown(f"<code style='font-size: 0.9rem'>{item['image_url']}</code>", unsafe_allow_html=True)
+
         if not st.session_state[f"generated_{idx}"]["image_description"]:
             with st.spinner("📷 Analysiere Bild..."):
                 _, description = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                 st.session_state[f"generated_{idx}"]["image_description"] = description
+
         if st.session_state[f"generated_{idx}"].get("image_description"):
             st.markdown("**🖼️ Bildbeschreibung:**")
             st.markdown(f"<code style='font-size: 1.0rem'>{st.session_state[f'generated_{idx}']['image_description']}</code>", unsafe_allow_html=True)
+
         if st.button(f"✨ Prompt & Bild generieren für: {item['headline']}", key=f"btn_generate_{idx}"):
             with st.spinner("🔍 Erzeuge Prompt..."):
                 prompt, _ = generate_prompt(item['headline'], item['dachzeile'], item['image_url'])
                 st.session_state[f"generated_{idx}"]["prompt"] = prompt
+
             if prompt:
                 st.markdown("**📝 Generierter Prompt:**")
                 st.markdown(f"<code style='font-size: 1.0rem'>{prompt}</code>", unsafe_allow_html=True)
@@ -142,10 +142,11 @@ if data:
                     st.session_state[f"generated_{idx}"]["imagen_url"] = imagen_url
                     st.session_state[f"generated_{idx}"]["luma_url"] = luma_url
             st.rerun()
+
         generated = st.session_state.get(f"generated_{idx}", {})
-        prompt = generated.get("prompt")
         imagen_url = generated.get("imagen_url")
         luma_url = generated.get("luma_url")
+
         if imagen_url or luma_url:
             col1, col2 = st.columns([2, 1])
             with col1:
