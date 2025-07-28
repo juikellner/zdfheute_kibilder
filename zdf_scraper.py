@@ -79,26 +79,23 @@ def scrape_top_articles():
             while parent and not parent.find("a"):
                 parent = parent.find_parent("div")
             if parent:
-                a_tag = parent.find("a")
-                title = a_tag.get_text(strip=True)
-                article_url = "https://www.zdfheute.de" + a_tag["href"]
-                
-                # Standard-Dachzeile
-                dachzeile_tag = parent.find("span")
-                dachzeile = dachzeile_tag.get_text(strip=True) if dachzeile_tag else ""
+                # Vermeide Teaser mit "mit Video"-Label
+                if parent.find("span", class_="m1lnp037", string="mit Video"):
+                    continue
 
-                # Wenn Dachzeile "Video" ist, versuche stattdessen die Themenzeile aus h2 zu nehmen
-                if dachzeile.lower() == "video":
-                    h2_tag = parent.find("h2", class_="h1npplxp")
-                    if h2_tag:
-                        themenzeile_span = h2_tag.find("span", class_="of88x80 tsdggcs")
-                    if themenzeile_span:
-                        dachzeile = themenzeile_span.get_text(strip=True)
-
-            else:
-                title = "Kein Titel gefunden"
-                dachzeile = ""
-                article_url = ""
+                # Extrahiere Schlagzeile und Dachzeile aus <h2 class="hvzzigm">
+                h2_tag = parent.find("h2", class_="hvzzigm")
+                if h2_tag:
+                    dachzeile_span = h2_tag.find("span", class_="o1ximh7k tsdggcs")
+                    headline_a = h2_tag.find("a")
+                    if dachzeile_span and headline_a:
+                        dachzeile = dachzeile_span.get_text(strip=True)
+                        title = headline_a.get_text(strip=True)
+                        article_url = "https://www.zdfheute.de" + headline_a["href"]
+                    else:
+                        continue
+                else:
+                    continue
 
             results.append({
                 "image_url": img_url,
