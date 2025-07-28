@@ -120,7 +120,7 @@ def generate_prompt(headline, dachzeile, image_url):
         vision_response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": f"Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Binde diesen Kontext in die Beschreibung ein."},
+                {"role": "system", "content": f"Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Beschreibe und erkenne vor allem die dargestellten Personen. Binde diesen Kontext in die Beschreibung ein."},
                 {"role": "user", "content": "Analysiere das folgende Bild und beschreibe den visuellen Inhalt unter Einbeziehung des Kontexts."},
                 {"type": "image_url", "image_url": {"url": image_url}}
             ],
@@ -131,7 +131,7 @@ def generate_prompt(headline, dachzeile, image_url):
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im News-Bereich."},
+                {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im Nachrichten-Bereich."},
                 {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
             ]
         )
