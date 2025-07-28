@@ -50,63 +50,51 @@ def scrape_top_articles():
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, "html.parser")
 
-        teasers = soup.find_all("picture", class_="slrzex8")[:3]
+        # Finde alle <h2>-Blöcke mit relevanter Struktur
+        teaser_blocks = soup.find_all("h2", class_="h1npplxp")[:3]
         results = []
-        for pic in teasers:
-            img = pic.find("img")
-            if not img:
-                continue
-            srcset = img.get("srcset", "")
-            images = [s.strip().split(" ")[0] for s in srcset.split(",") if s.strip() and "https://" in s]
 
-            filtered_images = []
-            for img_url in images:
-                dims_match = re.search(r"~(\d+)x(\d+)", img_url)
-                if dims_match:
-                    try:
-                        width, height = map(int, dims_match.groups())
-                        if width >= 276 and height >= 155:
-                            filtered_images.append((width, img_url))
-                    except ValueError:
-                        continue
+        for h2 in teaser_blocks:
+            # Dachzeile
+            dach_span = h2.find("span", class_="of88x80 tsdggcs")
+            dachzeile = dach_span.get_text(strip=True) if dach_span else ""
 
-            if not filtered_images:
-                continue
+            # Schlagzeile & Link
+            a_tag = h2.find("a", href=True)
+            headline = a_tag.get_text(strip=True) if a_tag else ""
+            article_url = "https://www.zdfheute.de" + a_tag["href"] if a_tag else ""
 
-            img_url = sorted(filtered_images, key=lambda x: x[0], reverse=True)[0][1]
+            # Versuche, das Bild zu finden (suche im Eltern-Container)
+            parent_div = h2.find_parent("div")
+            img_url = ""
+            if parent_div:
+                img_tag = parent_div.find("img")
+                if img_tag and img_tag.get("srcset"):
+                    srcset = img_tag.get("srcset", "")
+                    images = [s.strip().split(" ")[0] for s in srcset.split(",") if "https://" in s]
+                    filtered_images = []
+                    for url_candidate in images:
+                        dims_match = re.search(r"~(\d+)x(\d+)", url_candidate)
+                        if dims_match:
+                            try:
+                                width, height = map(int, dims_match.groups())
+                                if width >= 276 and height >= 155:
+                                    filtered_images.append((width, url_candidate))
+                            except ValueError:
+                                continue
+                    if filtered_images:
+                        img_url = sorted(filtered_images, key=lambda x: x[0], reverse=True)[0][1]
 
-            parent = pic.find_parent("div")
-            while parent and not parent.find("a"):
-                parent = parent.find_parent("div")
-            if parent:
-                a_tag = parent.find("a")
-                title = a_tag.get_text(strip=True)
-                article_url = "https://www.zdfheute.de" + a_tag["href"]
-                
-                # Standard-Dachzeile
-                dachzeile_tag = parent.find("span")
-                dachzeile = dachzeile_tag.get_text(strip=True) if dachzeile_tag else ""
+            if headline and img_url:
+                results.append({
+                    "image_url": img_url,
+                    "headline": headline,
+                    "dachzeile": dachzeile,
+                    "url": article_url
+                })
 
-                # Wenn Dachzeile "Video" ist, versuche stattdessen die Themenzeile aus h2 zu nehmen
-                if dachzeile.lower() == "video":
-                    h2_tag = parent.find("h2", class_="h1npplxp")
-                    if h2_tag:
-                        themenzeile_span = h2_tag.find("span", class_="of88x80 tsdggcs")
-                    if themenzeile_span:
-                        dachzeile = themenzeile_span.get_text(strip=True)
-
-            else:
-                title = "Kein Titel gefunden"
-                dachzeile = ""
-                article_url = ""
-
-            results.append({
-                "image_url": img_url,
-                "headline": title,
-                "dachzeile": dachzeile,
-                "url": article_url
-            })
         return results
+
     except Exception as e:
         st.error(f"Fehler beim Scraping: {e}")
         return []
