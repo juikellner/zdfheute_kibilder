@@ -120,7 +120,7 @@ def generate_prompt(headline, dachzeile, image_url):
         vision_response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-            {"role": "system", "content": f"Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Beschreibe und erkenne vor allem die dargestellten Personen. Binde diesen Kontext in die Beschreibung ein."},
+            {"role": "system", "content": f"Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Binde diesen Kontext in die Beschreibung ein."},
             {   
                 "role": "user",
                 "content": [
