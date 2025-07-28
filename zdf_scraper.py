@@ -118,9 +118,9 @@ def generate_prompt(headline, dachzeile, image_url):
         context_from_url = extract_context_from_url(image_url)
 
         vision_response = openai.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o",            
             messages=[
-            {"role": "system", "content": f"Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Binde diesen Kontext in die Beschreibung ein."},
+            {"role": "system", "content": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""},
             {   
                 "role": "user",
                 "content": [
