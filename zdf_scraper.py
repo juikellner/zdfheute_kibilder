@@ -123,7 +123,7 @@ def gemini_image_description(image_url, context_from_url):
         mime_type = image_response.headers.get("Content-Type", "image/jpeg")
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        gemini_endpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent"
+        gemini_endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
         headers = {
             "Content-Type": "application/json",
             "x-goog-api-key": gemini_api_key
