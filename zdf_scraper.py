@@ -13,7 +13,6 @@ import re
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 replicate_token = os.getenv("REPLICATE_API_TOKEN")
-gemini_api_key = os.getenv("GEMINI_API_KEY")
 
 # Streamlit app title
 st.set_page_config(layout="wide")
@@ -118,42 +117,25 @@ def generate_prompt(headline, dachzeile, image_url):
     try:
         context_from_url = extract_context_from_url(image_url)
 
-        def gemini_image_description(image_url, context_from_url):
-            try:
-                gemini_endpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent"
+        vision_response = openai.chat.completions.create(
+            model="gpt-4o",            
+            messages=[
+            {"role": "system", "content": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""},
+            {   
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Analysiere das folgende Bild und beschreibe den visuellen Inhalt unter Einbeziehung des Kontexts."},
+                    {"type": "image_url", "image_url": {"url": image_url}}
+                ]
+            }   
+        ],
+        max_tokens=1000
+        )
+        
+        image_description = vision_response.choices[0].message.content.strip().replace("\n", " ")
 
-                headers = {
-                    "Content-Type": "application/json",
-                    "x-goog-api-key": gemini_api_key
-                }
-
-                payload = {
-                    "contents": [
-                        {
-                            "parts": [
-                                {
-                                    "text": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""
-                                },
-                                {
-                                    "imageUrl": {
-                                        "url": image_url
-                                    }
-                                }
-                            ]
-                        }
-                    ]
-                }
-
-                response = requests.post(gemini_endpoint, headers=headers, json=payload)
-                response.raise_for_status()
-                result = response.json()
-                return result["candidates"][0]["content"]["parts"][0]["text"]
-            except Exception as e:
-                st.warning(f"Gemini-Bildbeschreibung fehlgeschlagen: {e}")
-                return ""
-    
         response = openai.chat.completions.create(
-            model="mistral-small-latest",
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im Nachrichten-Bereich."},
                 {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
