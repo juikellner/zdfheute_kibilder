@@ -121,7 +121,7 @@ def llama_image_description(image_url, context_from_url):
         image_bytes = image_response.content
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        api_url = "https://api-inference.huggingface.co/models/llava/llava-1.5-7b-hf"
+        api_url = "https://api-inference.huggingface.co/models/llava-hf/bakLLaVA-1.5-7B-hf"
         headers = {
             "Authorization": f"Bearer {huggingface_token}",
             "Content-Type": "application/json"
