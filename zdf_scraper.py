@@ -166,7 +166,7 @@ def generate_prompt(headline, dachzeile, image_url):
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im Nachrichten-Bereich."},
-                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
+                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt zum Generieren eines Aufmacher-Teaser für eine Nachrichte-Webseite. Nutze dazu die Informationen aus Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text im Bild enthalten."}
             ]
         )
 
