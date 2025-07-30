@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import openai
 import replicate
 import re
+import base64
 
 # Load API keys from .env
 load_dotenv()
@@ -128,6 +129,12 @@ def generate_prompt(headline, dachzeile, image_url):
                     "Content-Type": "application/json",
                     "x-goog-api-key": gemini_api_key
                 }
+
+                # Bild von URL laden und als base64 kodieren
+                image_response = requests.get(image_url)
+                image_response.raise_for_status()
+                image_bytes = image_response.content
+                image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
                 payload = {
                     "contents": [
