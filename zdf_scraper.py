@@ -13,7 +13,7 @@ import base64
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 replicate_token = os.getenv("REPLICATE_API_TOKEN")
-openrouter_token = os.getenv("OPENROUTER_API_KEY")
+fireworks_api_key = os.getenv("FIREWORKS_API_KEY")
 
 # Streamlit app title
 st.set_page_config(layout="wide")
@@ -112,7 +112,7 @@ def scrape_top_articles():
         st.error(f"Fehler beim Scraping: {e}")
         return []
 
-# Bildbeschreibung mit LLaVA über Hugging Face
+# Bildbeschreibung mit Qwen-VL über Fireworks.ai
 
 def llama_image_description(image_url, context_from_url):
     try:
@@ -122,32 +122,38 @@ def llama_image_description(image_url, context_from_url):
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
         headers = {
-            "Authorization": f"Bearer {openrouter_token}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://openrouter.ai",
-            "X-Title": "ZDF-KI-Bildbeschreibung"
+            "Authorization": f"Bearer {fireworks_api_key}",
+            "Content-Type": "application/json"
         }
 
-        endpoint = "https://openrouter.ai/api/v1/chat/completions"
         payload = {
-            "model": "openrouter/llava-llama-3-8b",
+            "model": "qwen/qwen2-72b-vl-chat",
             "messages": [
-                {"role": "system", "content": "You are a visual news assistant. Given a base64 image and context, describe the image content in bullet points (German)."},
-                {"role": "user", "content": [
-                    {"type": "text", "text": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
-                ]}
+                {"role": "system", "content": "Du bist ein Nachrichtenmodell, das journalistische Bilder in Stichpunkten beschreibt. Beschreibe sachlich und kurz auf Deutsch."},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": f"Kontext aus URL: {context_from_url}. Beschreibe den Inhalt des Bildes in 3–5 Stichpunkten."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+                    ]
+                }
             ],
-            "max_tokens": 300
+            "max_tokens": 300,
+            "temperature": 0.2
         }
 
-        response = requests.post(endpoint, headers=headers, json=payload)
+        response = requests.post(
+            "https://api.fireworks.ai/inference/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
         response.raise_for_status()
         result = response.json()
         return result['choices'][0]['message']['content'].strip()
 
     except Exception as e:
-        st.warning(f"LLaMA-Bildbeschreibung (OpenRouter) fehlgeschlagen: {e}")
+        st.warning(f"Qwen-Bildbeschreibung (Fireworks) fehlgeschlagen: {e}")
         return ""
 
 def generate_prompt(headline, dachzeile, image_url):
