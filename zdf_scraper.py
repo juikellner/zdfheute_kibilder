@@ -143,7 +143,7 @@ def llama_image_description(image_url, context_from_url):
         }
 
         response = requests.post(
-            "https://api.fireworks.ai/inference/v1/chat/completions",
+            "https://api.fireworks.ai/v1/chat/completions",
             headers=headers,
             json=payload,
             timeout=60
