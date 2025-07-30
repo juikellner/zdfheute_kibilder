@@ -135,7 +135,7 @@ def generate_prompt(headline, dachzeile, image_url):
         image_description = vision_response.choices[0].message.content.strip().replace("\n", " ")
 
         response = openai.chat.completions.create(
-            model="gpt-4",
+            model="mistral-small-latest",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im Nachrichten-Bereich."},
                 {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
