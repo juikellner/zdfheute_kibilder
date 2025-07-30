@@ -4,4 +4,3 @@ replicate
 python-dotenv
 requests
 beautifulsoup4
-pillow

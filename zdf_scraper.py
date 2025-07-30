@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-from PIL import Image
 from io import BytesIO
 import os
 from dotenv import load_dotenv
@@ -14,7 +13,7 @@ import base64
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 replicate_token = os.getenv("REPLICATE_API_TOKEN")
-gemini_api_key = os.getenv("GEMINI_API_KEY")
+huggingface_token = os.getenv("HUGGINGFACE_API_TOKEN")
 
 # Streamlit app title
 st.set_page_config(layout="wide")
@@ -113,53 +112,52 @@ def scrape_top_articles():
         st.error(f"Fehler beim Scraping: {e}")
         return []
 
-# Generate image prompt using OpenAI
+# Bildbeschreibung mit LLaVA über Hugging Face
 
-def gemini_image_description(image_url, context_from_url):
+def llama_image_description(image_url, context_from_url):
     try:
         image_response = requests.get(image_url)
         image_response.raise_for_status()
         image_bytes = image_response.content
-        mime_type = image_response.headers.get("Content-Type", "image/jpeg")
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        gemini_endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+        api_url = "https://api-inference.huggingface.co/models/llava-hf/llava-1.5-7b-hf"
         headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": gemini_api_key
+            "Authorization": f"Bearer {huggingface_token}",
+            "Content-Type": "application/json"
         }
 
         payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""
-                        },
-                        {
-                            "inline_data": {
-                                "mime_type": mime_type,
-                                "data": image_base64
-                            }
-                        }
-                    ]
-                }
-            ]
+            "inputs": {
+                "prompt": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein.""",
+                "image": image_base64
+            },
+            "parameters": {
+                "temperature": 0.2
+            },
+            "options": {
+                "wait_for_model": True
+            }
         }
 
-        response = requests.post(gemini_endpoint, headers=headers, json=payload)
+        response = requests.post(api_url, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
-        return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+        if isinstance(result, list) and 'generated_text' in result[0]:
+            return result[0]['generated_text'].strip()
+        else:
+            st.warning("Kein gültiger Text von Hugging Face erhalten.")
+            return ""
 
     except Exception as e:
-        st.warning(f"Gemini-Bildbeschreibung fehlgeschlagen: {e}")
+        st.warning(f"LLaMA-Bildbeschreibung (HF) fehlgeschlagen: {e}")
         return ""
 
 def generate_prompt(headline, dachzeile, image_url):
     try:
         context_from_url = extract_context_from_url(image_url)
-        image_description = gemini_image_description(image_url, context_from_url)
+        image_description = llama_image_description(image_url, context_from_url)
 
         response = openai.chat.completions.create(
             model="gpt-4",
