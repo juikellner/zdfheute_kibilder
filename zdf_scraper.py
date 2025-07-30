@@ -20,7 +20,7 @@ st.set_page_config(layout="wide")
 st.title("📰 ZDFheute KI-Teaser")
 
 # Hinweistext (klein und responsiv)
-st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei Top-Teaser auf zdfheute.de und nutzt die <code>GPT-4o/4-Modelle</code> von OpenAI zur Bildbeschreibung und Prompt-Erstellung. Der Prompt zum Erstellen des KI-Bildes wird mit den Informationen aus Bildbeschreibung, Bildquelle (URL), Schlag- und Dachzeile generiert. Für die Bildgenerierung wird das <code>imagen-4-fast-Modell</code> von Google auf replicate.com eingesetzt.</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 1.1rem; line-height: 1.4;'>🔍 Diese Anwendung scrapt die drei ersten Top-Teaserbilder samt Schlag- und Dachzeile, Bild- und Artikel-URL von der zdfheute.de-Webseite. Zur Bildbeschreibung wird das <code>LLaMA 4 Scout-Modell</code> von Meta über Together.ai eingesetzt. Das <code>GPT-4-Modell</code> von OpenAI generiert den Prompt mit den Informationen aus Bilderkennung, Bild-URL, Schlag- und Dachzeile. Für die Bildgenerierung wird das <code>imagen-4-fast-Modell</code> von Google auf replicate.com eingesetzt.</p>", unsafe_allow_html=True)
 
 # GPT-gestützte Extraktion von Kontext aus Bild-URL
 
@@ -166,7 +166,7 @@ def generate_prompt(headline, dachzeile, image_url):
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Du bist ein kreativer Prompt-Designer für Text-zu-Bild-KI im Nachrichten-Bereich."},
-                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt zum Generieren eines Aufmacher-Teaser für eine Nachrichte-Webseite. Nutze dazu die Informationen aus Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text im Bild enthalten."}
+                {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt zum Generieren eines Aufmacher-Teaserbilder für eine große Nachrichte-Webseite auf Deutsch. Nutze dazu die Informationen aus Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text im Bild enthalten."}
             ]
         )
 
