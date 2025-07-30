@@ -151,11 +151,6 @@ def llama_image_description(image_url, context_from_url):
         response.raise_for_status()
         result = response.json()
 
-        # Tokenverbrauch anzeigen
-        if "usage" in result:
-            total_tokens = result["usage"].get("total_tokens", 0)
-            st.markdown(f"🧮 **Verbrauchte Tokens (Bildbeschreibung):** {total_tokens}")
-
         return result['choices'][0]['message']['content'].replace("\n", " ").replace("•", "").strip()
 
     except Exception as e:
