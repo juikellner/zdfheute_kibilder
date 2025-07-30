@@ -156,7 +156,7 @@ def llama_image_description(image_url, context_from_url):
             total_tokens = result["usage"].get("total_tokens", 0)
             st.markdown(f"🧮 **Verbrauchte Tokens (Bildbeschreibung):** {total_tokens}")
 
-        return result['choices'][0]['message']['content'].strip()
+        return result['choices'][0]['message']['content'].replace("\n", " ").replace("•", "").strip()
 
     except Exception as e:
         st.warning(f"LLaMA-Bildbeschreibung (Together) fehlgeschlagen: {e}")
