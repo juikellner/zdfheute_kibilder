@@ -83,16 +83,18 @@ def scrape_top_articles():
                 title = a_tag.get_text(strip=True) if a_tag else "Kein Titel gefunden"
                 article_url = "https://www.zdfheute.de" + a_tag["href"] if a_tag and a_tag.has_attr("href") else ""
 
-                # Bevorzugt Themenzeile aus <span class="of88x80 tsdggcs"> für Dachzeile (auch bei "mit Video")
-                h2_tag = parent.find("h2", class_="h1npplxp") or parent.find("h2", class_="hvzzigm")
-                if h2_tag:
-                    themenzeile_span = h2_tag.find("span", class_="of88x80 tsdggcs")
-                    if themenzeile_span:
-                        dachzeile = themenzeile_span.get_text(strip=True)
-                    else:
-                        dachzeile = ""
-                else:
-                    dachzeile = ""
+                # Suche nach h2 mit Dach- und Schlagzeile
+                h2_tag = parent.find("h2", class_="hvzzigm") or parent.find("h2", class_="h1npplxp")
+
+            if h2_tag:
+                # Dachzeile suchen (egal ob tsdggcs + o1ximh7k oder andere)
+                dach_span = h2_tag.find("span", class_="o1ximh7k tsdggcs") or h2_tag.find("span", class_="of88x80 tsdggcs")
+                dachzeile = dach_span.get_text(strip=True) if dach_span else ""
+
+                # Schlagzeile suchen
+                headline_a = h2_tag.find("a")
+                title = headline_a.get_text(strip=True) if headline_a else "Kein Titel gefunden"
+                article_url = "https://www.zdfheute.de" + headline_a["href"] if headline_a and headline_a.has_attr("href") else ""
             else:
                 title = "Kein Titel gefunden"
                 dachzeile = ""
