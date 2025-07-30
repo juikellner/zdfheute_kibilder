@@ -13,7 +13,7 @@ import base64
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 replicate_token = os.getenv("REPLICATE_API_TOKEN")
-huggingface_token = os.getenv("HUGGINGFACE_API_TOKEN")
+openrouter_token = os.getenv("OPENROUTER_API_KEY")
 
 # Streamlit app title
 st.set_page_config(layout="wide")
@@ -121,37 +121,33 @@ def llama_image_description(image_url, context_from_url):
         image_bytes = image_response.content
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        api_url = "https://api-inference.huggingface.co/models/llava-hf/bakLLaVA-1.5-7B-hf"
         headers = {
-            "Authorization": f"Bearer {huggingface_token}",
-            "Content-Type": "application/json"
+            "Authorization": f"Bearer {openrouter_token}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://openrouter.ai",
+            "X-Title": "ZDF-KI-Bildbeschreibung"
         }
 
+        endpoint = "https://openrouter.ai/api/v1/chat/completions"
         payload = {
-            "inputs": {
-                "prompt": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein.""",
-                "image": image_base64
-            },
-            "parameters": {
-                "temperature": 0.2
-            },
-            "options": {
-                "wait_for_model": True
-            }
+            "model": "openrouter/llava-llama-3-8b",
+            "messages": [
+                {"role": "system", "content": "You are a visual news assistant. Given a base64 image and context, describe the image content in bullet points (German)."},
+                {"role": "user", "content": [
+                    {"type": "text", "text": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+                ]}
+            ],
+            "max_tokens": 300
         }
 
-        response = requests.post(api_url, headers=headers, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
-
-        if isinstance(result, list) and 'generated_text' in result[0]:
-            return result[0]['generated_text'].strip()
-        else:
-            st.warning("Kein gültiger Text von Hugging Face erhalten.")
-            return ""
+        return result['choices'][0]['message']['content'].strip()
 
     except Exception as e:
-        st.warning(f"LLaMA-Bildbeschreibung (HF) fehlgeschlagen: {e}")
+        st.warning(f"LLaMA-Bildbeschreibung (OpenRouter) fehlgeschlagen: {e}")
         return ""
 
 def generate_prompt(headline, dachzeile, image_url):
