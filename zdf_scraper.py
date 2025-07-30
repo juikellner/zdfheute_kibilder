@@ -80,21 +80,19 @@ def scrape_top_articles():
                 parent = parent.find_parent("div")
             if parent:
                 a_tag = parent.find("a")
-                title = a_tag.get_text(strip=True)
-                article_url = "https://www.zdfheute.de" + a_tag["href"]
-                
-                # Standard-Dachzeile
-                dachzeile_tag = parent.find("span")
-                dachzeile = dachzeile_tag.get_text(strip=True) if dachzeile_tag else ""
+                title = a_tag.get_text(strip=True) if a_tag else "Kein Titel gefunden"
+                article_url = "https://www.zdfheute.de" + a_tag["href"] if a_tag and a_tag.has_attr("href") else ""
 
-                # Wenn Dachzeile "Video" ist, versuche stattdessen die Themenzeile aus h2 zu nehmen
-                if dachzeile.lower() == "video":
-                    h2_tag = parent.find("h2", class_="h1npplxp")
-                    if h2_tag:
-                        themenzeile_span = h2_tag.find("span", class_="of88x80 tsdggcs")
+                # Bevorzugt Themenzeile aus <span class="of88x80 tsdggcs"> für Dachzeile (auch bei "mit Video")
+                h2_tag = parent.find("h2", class_="h1npplxp") or parent.find("h2", class_="hvzzigm")
+                if h2_tag:
+                    themenzeile_span = h2_tag.find("span", class_="of88x80 tsdggcs")
                     if themenzeile_span:
                         dachzeile = themenzeile_span.get_text(strip=True)
-
+                    else:
+                        dachzeile = ""
+                else:
+                    dachzeile = ""
             else:
                 title = "Kein Titel gefunden"
                 dachzeile = ""
