@@ -151,7 +151,7 @@ def llama_image_description(image_url, context_from_url):
         response.raise_for_status()
         result = response.json()
 
-        return result['choices'][0]['message']['content'].replace("\n", " ").replace("•", "").strip()
+        return ' '.join(result['choices'][0]['message']['content'].replace("\n", " ").replace("•", "").replace("-", "").replace("*", "").split())
 
     except Exception as e:
         st.warning(f"LLaMA-Bildbeschreibung (Together) fehlgeschlagen: {e}")
