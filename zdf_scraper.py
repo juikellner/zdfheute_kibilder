@@ -115,53 +115,50 @@ def scrape_top_articles():
 
 # Generate image prompt using OpenAI
 
-def generate_prompt(headline, dachzeile, image_url):
+def gemini_image_description(image_url, context_from_url):
     try:
-        context_from_url = extract_context_from_url(image_url)
+        image_response = requests.get(image_url)
+        image_response.raise_for_status()
+        image_bytes = image_response.content
+        mime_type = image_response.headers.get("Content-Type", "image/jpeg")
+        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        # Gemini Flash 2.5 Bildbeschreibung
+        gemini_endpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": gemini_api_key
+        }
 
-        def gemini_image_description(image_url, context_from_url):
-            try:
-                gemini_endpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent"
-
-                headers = {
-                    "Content-Type": "application/json",
-                    "x-goog-api-key": gemini_api_key
-                }
-
-                # Bild von URL laden und als base64 kodieren
-                image_response = requests.get(image_url)
-                image_response.raise_for_status()
-                image_bytes = image_response.content
-                image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-
-                payload = {
-                    "contents": [
+        payload = {
+            "contents": [
+                {
+                    "parts": [
                         {
-                            "parts": [
-                                {
-                                    "text": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""
-                                },
-                                {
-                                    "imageUrl": {
-                                        "url": image_url
-                                    }
-                                }
-                            ]
+                            "text": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""
+                        },
+                        {
+                            "inline_data": {
+                                "mime_type": mime_type,
+                                "data": image_base64
+                            }
                         }
                     ]
                 }
+            ]
+        }
 
-                response = requests.post(gemini_endpoint, headers=headers, json=payload)
-                response.raise_for_status()
-                result = response.json()
-                return result["candidates"][0]["content"]["parts"][0]["text"].strip()
-            except Exception as e:
-                st.warning(f"Gemini-Bildbeschreibung fehlgeschlagen: {e}")
-                return ""
+        response = requests.post(gemini_endpoint, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return result["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-        
+    except Exception as e:
+        st.warning(f"Gemini-Bildbeschreibung fehlgeschlagen: {e}")
+        return ""
+
+def generate_prompt(headline, dachzeile, image_url):
+    try:
+        context_from_url = extract_context_from_url(image_url)
         image_description = gemini_image_description(image_url, context_from_url)
 
         response = openai.chat.completions.create(
@@ -171,7 +168,9 @@ def generate_prompt(headline, dachzeile, image_url):
                 {"role": "user", "content": f"Erstelle einen photo-realistischen Bildprompt auf Englisch für folgende ZDF-Schlagzeile: '{headline}'\nDachzeile: '{dachzeile}'\nKontext: '{context_from_url}'\nBildbeschreibung: {image_description}. Der Prompt soll für ein Bildmodell geeignet sein und darf keinen Text enthalten."}
             ]
         )
+
         return response.choices[0].message.content.strip().replace("\n", " "), image_description
+
     except Exception as e:
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
         return None, None
