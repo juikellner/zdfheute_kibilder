@@ -13,7 +13,7 @@ import base64
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 replicate_token = os.getenv("REPLICATE_API_TOKEN")
-fireworks_api_key = os.getenv("FIREWORKS_API_KEY")
+together_api_key = os.getenv("TOGETHER_API_KEY")
 
 # Streamlit app title
 st.set_page_config(layout="wide")
@@ -112,7 +112,7 @@ def scrape_top_articles():
         st.error(f"Fehler beim Scraping: {e}")
         return []
 
-# Bildbeschreibung mit Qwen-VL über Fireworks.ai
+# Bildbeschreibung mit LLaMA 4 Scout über Together.ai
 
 def llama_image_description(image_url, context_from_url):
     try:
@@ -122,18 +122,18 @@ def llama_image_description(image_url, context_from_url):
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
         headers = {
-            "Authorization": f"Bearer {fireworks_api_key}",
+            "Authorization": f"Bearer {together_api_key}",
             "Content-Type": "application/json"
         }
 
         payload = {
-            "model": "qwen/qwen2-72b-vl-chat",
+            "model": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
             "messages": [
-                {"role": "system", "content": "Du bist ein Nachrichtenmodell, das journalistische Bilder in Stichpunkten beschreibt. Beschreibe sachlich und kurz auf Deutsch."},
+                {"role": "system", "content": "Du bist ein journalistisches Bildmodell. Beschreibe den visuellen Inhalt des folgenden Bildes in Stichpunkten auf Deutsch. Kontext: {context_from_url}"},
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": f"Kontext aus URL: {context_from_url}. Beschreibe den Inhalt des Bildes in 3–5 Stichpunkten."},
+                        {"type": "text", "text": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
                     ]
                 }
@@ -143,17 +143,23 @@ def llama_image_description(image_url, context_from_url):
         }
 
         response = requests.post(
-            "https://api.fireworks.ai/v1/chat/completions",
+            "https://api.together.xyz/v1/chat/completions",
             headers=headers,
             json=payload,
             timeout=60
         )
         response.raise_for_status()
         result = response.json()
+
+        # Tokenverbrauch anzeigen
+        if "usage" in result:
+            total_tokens = result["usage"].get("total_tokens", 0)
+            st.markdown(f"🧮 **Verbrauchte Tokens (Bildbeschreibung):** {total_tokens}")
+
         return result['choices'][0]['message']['content'].strip()
 
     except Exception as e:
-        st.warning(f"Qwen-Bildbeschreibung (Fireworks) fehlgeschlagen: {e}")
+        st.warning(f"LLaMA-Bildbeschreibung (Together) fehlgeschlagen: {e}")
         return ""
 
 def generate_prompt(headline, dachzeile, image_url):
