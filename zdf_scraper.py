@@ -152,7 +152,10 @@ def llama_image_description(image_url, context_from_url):
         result = response.json()
 
         cleaned_text = ' '.join(result['choices'][0]['message']['content'].replace("\n", " ").replace("•", "").replace("-", "").replace("*", "").split())
-        return cleaned_text[:700]
+        if len(cleaned_text) > 700:
+            cleaned_text = cleaned_text[:700].rsplit(" ", 1)[0]
+        return cleaned_text
+
 
 
     except Exception as e:
