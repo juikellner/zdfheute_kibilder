@@ -133,7 +133,7 @@ def llama_image_description(image_url, context_from_url):
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""},
+                        {"type": "text", "text": f"""Du bist ein visuelles Analysemodell. Du beschreibst journalistische Nachrichtenbilder kurz und prägnant in Stichpunkten. Berücksichtige unbedingt den folgenden Kontext aus der Bild-URL: '{context_from_url}'. Entnehme aus der Bild-URL alle relevanten Informationen wie zum Beispiel Personennamen, Stadtnamen, Ländernamen, Gebietsnamen, Zeitungen, Datum, Zeitpunkte oder Ereignisse. Beispiel: https://www.zdfheute.de/assets/zugunglueck-oberschwaben-unfallstelle-100~3840x2160?cb=1753713336408 Hier sind nach "https://www.zdfheute.de/assets/" die relevanten Informationen "zugunglueck", "oberschwaben" und "unfallstelle" enthalten. Binde diesen Kontext in die Beschreibung des Bildinhalts ein."""},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
                     ]
                 }
@@ -152,11 +152,15 @@ def llama_image_description(image_url, context_from_url):
         result = response.json()
 
         cleaned_text = ' '.join(result['choices'][0]['message']['content'].replace("\n", " ").replace("•", "").replace("-", "").replace("*", "").split())
-        if len(cleaned_text) > 700:
-            cleaned_text = cleaned_text[:700].rsplit(" ", 1)[0]
-        return cleaned_text
-
-
+        sentences = cleaned_text.split(".")
+        new_text = ""
+        for sentence in sentences:
+            candidate = (new_text + sentence.strip() + ". ").strip()
+            if len(candidate) <= 700:
+                new_text = candidate
+            else:
+                break
+        return new_text.strip()
 
     except Exception as e:
         st.warning(f"LLaMA-Bildbeschreibung (Together) fehlgeschlagen: {e}")
