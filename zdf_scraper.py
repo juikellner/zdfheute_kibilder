@@ -151,7 +151,9 @@ def llama_image_description(image_url, context_from_url):
         response.raise_for_status()
         result = response.json()
 
-        return ' '.join(result['choices'][0]['message']['content'].replace("\n", " ").replace("•", "").replace("-", "").replace("*", "").split())
+        cleaned_text = ' '.join(result['choices'][0]['message']['content'].replace("\n", " ").replace("•", "").replace("-", "").replace("*", "").split())
+        return cleaned_text[:700]
+
 
     except Exception as e:
         st.warning(f"LLaMA-Bildbeschreibung (Together) fehlgeschlagen: {e}")
@@ -170,7 +172,8 @@ def generate_prompt(headline, dachzeile, image_url):
             ]
         )
 
-        return response.choices[0].message.content.strip().replace("\n", " "), image_description
+        prompt = response.choices[0].message.content.strip().replace("\n", " ")
+        return prompt[:700], image_description
 
     except Exception as e:
         st.error(f"Fehler bei Prompt-Erstellung: {e}")
